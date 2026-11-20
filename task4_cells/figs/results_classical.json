@@ -1,0 +1,99 @@
+{
+ "constant, train mean": {
+  "how": "no parameters",
+  "test": {
+   "n": 100,
+   "mae": 56.063999999999986,
+   "rmse": 64.54114312785295,
+   "bias": 9.992500000000001,
+   "r2": -0.02455907537752755,
+   "rel_mae": 0.4031698714357546,
+   "worst": 135.5375
+  },
+  "valid_mae": 50.1
+ },
+ "constant, train median": {
+  "how": "no parameters",
+  "test": {
+   "n": 100,
+   "mae": 57.11,
+   "rmse": 65.87070669121442,
+   "bias": 16.53,
+   "r2": -0.06720621010489891,
+   "rel_mae": 0.4234590388092409,
+   "worst": 129.0
+  },
+  "valid_mae": 50.2
+ },
+ "Otsu threshold, count blobs": {
+  "how": "no parameters (Otsu per image)",
+  "test": {
+   "n": 100,
+   "mae": 94.6,
+   "rmse": 120.2154732137257,
+   "bias": -83.14,
+   "r2": -2.5545484550284225,
+   "rel_mae": 0.483950502468635,
+   "worst": 265.0
+  },
+  "valid_mae": 109.1
+ },
+ "bright cores at 0.70, blobs counted": {
+  "how": "tuned on validation: t=0.70, min area 0",
+  "test": {
+   "n": 100,
+   "mae": 81.19,
+   "rmse": 94.04887027497992,
+   "bias": -81.19,
+   "r2": -1.1755589941247884,
+   "rel_mae": 0.4401984995959614,
+   "worst": 201.0
+  },
+  "valid_mae": 83.3
+ },
+ "blobs at 0.60, area / 60 px": {
+  "how": "tuned on validation: t=0.60, divisor 60 px",
+  "test": {
+   "n": 100,
+   "mae": 12.66,
+   "rmse": 15.140673697032112,
+   "bias": -6.92,
+   "r2": 0.9436162316679273,
+   "rel_mae": 0.08520870818194441,
+   "worst": 39.0
+  },
+  "valid_mae": 11.05
+ },
+ "brightness sum above 0.20 / 62": {
+  "how": "one parameter fitted on train, floor chosen on validation",
+  "test": {
+   "n": 100,
+   "mae": 10.690301895141602,
+   "rmse": 12.760837551929171,
+   "bias": -3.333572769165039,
+   "r2": 0.95994819820564,
+   "rel_mae": 0.081815787508607,
+   "worst": 30.74367904663086
+  },
+  "valid_mae": 10.218574142456054
+ },
+ "peaks of a sigma=1.5 blur": {
+  "how": "tuned on validation: sigma=1.5, level=0.30",
+  "test": {
+   "n": 100,
+   "mae": 25.36,
+   "rmse": 34.30714211355997,
+   "bias": -19.9,
+   "r2": 0.7105105232442724,
+   "rel_mae": 0.13498301610646693,
+   "worst": 101.0,
+   "tp": 12130,
+   "n_peaks": 15157,
+   "n_true": 17147,
+   "precision": 0.8002902949132414,
+   "recall": 0.7074123753426256,
+   "f1": 0.7509905894006934
+  },
+  "valid_mae": 24.35
+ }
+}

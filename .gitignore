@@ -1,0 +1,19 @@
+# Downloaded datasets and everything derived from them — none of it is authored here,
+# and all of it is rebuilt by each task's parse_*.py / parse step from a download.
+#   data/hapt_archive + data/hapt      UCI HAPT       (79 MB zip, 63 MB extracted)
+#   data/ludb                          LUDB           (28 MB)
+#   data/cells_archive + data/cells    cell counting  (16 MB zip, 17 MB extracted)
+/data/
+cache/
+
+# Per-image prediction dumps written by the training scripts (task 4's is 124 MB).
+# Everything downstream reads them and re-derives the numbers in results_*.json.
+preds_*.npz
+
+# Trained weights: regenerable by the training scripts, 44 MB of it from task 1 alone.
+# The .onnx files ARE tracked — they are the deliverable the course app loads.
+*.pt
+
+# Python
+__pycache__/
+*.py[cod]

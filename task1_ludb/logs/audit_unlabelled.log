@@ -1,0 +1,21 @@
+detecting QRS-like peaks that carry no label (tolerance +-50 samples):
+
+  detector threshold 0.3: unlabelled beats -> in the head/tail 413, INTERIOR (trimming will not remove them) 12
+    records with the most interior unlabelled beats (interior, edge, annotated QRS, record): [(11, 0, 0, 103), (1, 2, 7, 110), (0, 6, 5, 94), (0, 4, 7, 123), (0, 3, 14, 91), (0, 3, 11, 90)]
+    records with at least one interior unlabelled beat: 2 /200
+
+  detector threshold 0.5: unlabelled beats -> in the head/tail 399, INTERIOR (trimming will not remove them) 12
+    records with the most interior unlabelled beats (interior, edge, annotated QRS, record): [(11, 0, 0, 103), (1, 2, 7, 110), (0, 3, 14, 91), (0, 3, 11, 90), (0, 3, 9, 125), (0, 3, 8, 128)]
+    records with at least one interior unlabelled beat: 2 /200
+
+records with >=1 interior unlabelled beat at threshold 0.4: 2 -> [103, 110]
+which split: {'train': 2, 'valid': 0, 'test': 0}
+
+trim to the annotated span keeps 3640 of 5000 samples on average (min 2318, max 4411); that drops 26.9 % of the signal
+  buffer    0 samples (   0 ms) around the span re-admits  11 unlabelled beats
+  buffer  100 samples ( 200 ms) around the span re-admits  13 unlabelled beats
+  buffer  250 samples ( 500 ms) around the span re-admits  29 unlabelled beats
+  buffer  500 samples (1000 ms) around the span re-admits 334 unlabelled beats
+wrote task1_ludb\figs\unlabelled_test_32.png
+wrote task1_ludb\figs\unlabelled_interior_103.png
+wrote task1_ludb\figs\unlabelled_broken lead II_103.png

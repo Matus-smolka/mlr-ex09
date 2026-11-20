@@ -1,0 +1,3 @@
+saved task1_ludb\cache\ludb.npz 16.8 MB + ludb_records.csv
+signals (200, 5000) labels (200, 5000) {'train': 140, 'valid': 30, 'test': 30}
+fraction of the samples in each class: {'background': np.float64(0.681), 'P': np.float64(0.079), 'QRS': np.float64(0.09), 'T': np.float64(0.15)}

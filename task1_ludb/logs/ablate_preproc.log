@@ -1,0 +1,34 @@
+device cuda | arm under test: lead II ['II'], loss CE + dice, recipe [8, 16, 32, 64, 128, 256, 512] lr 1e-03 augment True, 120 epochs, seeds (0, 1)
+input transform arms: none | clip +-5 | 300 ms median subtracted | both
+  none    |x| > 5 in 0.8700% of samples, range -25.1 .. +25.3
+  clip    |x| > 5 in 0.0000% of samples, range -5.0 .. +5.0
+  wander  |x| > 5 in 1.1571% of samples, range -24.7 .. +19.9
+  both    |x| > 5 in 0.0000% of samples, range -5.0 .. +5.0
+120 epochs in 21 s; best validation loss 0.3099 in epoch 110
+  none    seed 0   validation P 0.860  / QRS 0.952  / T 0.914   0.909
+120 epochs in 23 s; best validation loss 0.3080 in epoch 111
+  none    seed 1   validation P 0.863  / QRS 0.950  / T 0.913   0.909
+120 epochs in 26 s; best validation loss 0.3106 in epoch 90
+  clip    seed 0   validation P 0.837  / QRS 0.955  / T 0.914   0.902
+120 epochs in 27 s; best validation loss 0.3259 in epoch 83
+  clip    seed 1   validation P 0.859  / QRS 0.948  / T 0.913   0.907
+120 epochs in 28 s; best validation loss 0.3206 in epoch 113
+  wander  seed 0   validation P 0.836  / QRS 0.952  / T 0.905   0.898
+120 epochs in 29 s; best validation loss 0.3244 in epoch 109
+  wander  seed 1   validation P 0.836  / QRS 0.953  / T 0.903   0.897
+120 epochs in 28 s; best validation loss 0.3154 in epoch 114
+  both    seed 0   validation P 0.831  / QRS 0.952  / T 0.909   0.898
+120 epochs in 29 s; best validation loss 0.3282 in epoch 111
+  both    seed 1   validation P 0.860  / QRS 0.952  / T 0.905   0.905
+
+validation, mean over seeds:
+  none    0.909   (sd 0.000, +0.000 against no preprocessing)
+  clip    0.904   (sd 0.002, -0.004 against no preprocessing)
+  both    0.902   (sd 0.004, -0.007 against no preprocessing)
+  wander  0.897   (sd 0.000, -0.011 against no preprocessing)
+
+test, transform 'none': P 0.765  / QRS 0.941  / T 0.899   mean 0.868   (2 seed(s) averaged)
+
+for scale, the classical baseline on validation is P 0.679  / QRS 0.900  / T 0.810
+and the spread between seeds of one arm, which is what a difference has to beat, is 0.004 here
+wrote task1_ludb\figs\ablate_preproc.json

@@ -1,0 +1,85 @@
+==============================================================================
+1. STRUCTURE
+==============================================================================
+images (200, 256, 256) float32 in [0.0000, 1.0000] | non-finite 0
+dot masks (200, 256, 256) | total dots 35192 | per image 74-317, mean 176.0, median 174, sd 61.4
+splits {'train': 80, 'valid': 20, 'test': 100} | disjoint True | covers all 200: True
+count per split: train mean 181 sd 58 range 78-315 | valid mean 176 sd 62 range 78-295 | test mean 171 sd 64 range 74-317
+images sharing a coarse fingerprint: 0 | byte-identical pairs: 0
+
+==============================================================================
+2. WHAT THE NOTEBOOK'S TWO CHOICES KEEP
+==============================================================================
+image files, channel means: red 0.00184, green 0.00200, blue 0.35455 -> the cells are in the blue channel, the other two are dark but not empty
+dot files: red pixels 35192, of which the 'green == 0' condition drops 0; green pixels 0, blue 0
+cells: notebook's rule finds 35192, raw red would find 35192 (difference 0)
+
+==============================================================================
+3. THE DOTS
+==============================================================================
+dot mask: 35192 marked pixels in 34741 connected components (sizes 1-3) -> 451 places where two annotated centres touch and their 1-pixel dots merge into one component
+   the notebook's count is the PIXEL sum, so it is kept here; but those 451 pairs are genuinely ambiguous at 1 px, and no density map can resolve two centres 1 px apart - a ceiling on any localization score, not on the count
+nearest-neighbour distance between centres (px): p1 1.0, p5 2.2, median 8.5, p95 20.6, max 67.6
+pairs closer than 2 px (one Gaussian smear cannot separate them): 896 of 35192
+dots on the outermost row/column: 441
+
+==============================================================================
+4. THE CELLS, FROM THE BLOBS THAT HOLD EXACTLY ONE DOT
+==============================================================================
+Otsu threshold: median 0.252 (range 0.143-0.369) | foreground 68.5% of all pixels | blobs 17356
+annotated centres that fall on no foreground pixel at all: 1 of 35192 (0.00%) - the threshold does not see every labelled cell
+blobs holding exactly one dot: 2019 of 17356
+their area (px): p5 63, median 126, p95 211 -> equivalent radius 4.5 / 6.3 / 8.2 px (p5 / median / p95)
+their eccentricity: median 0.41, p95 0.80 (0 = circle, 1 = slit) -> 'cells are round' is supported
+176 cells of 126 px need 34% of the frame if none overlapped; the foreground is 68% -> overlap is not an edge case, it is most of the image
+
+==============================================================================
+5. THE OVERLAP
+==============================================================================
+cells per blob: 1 -> 2019, 2 -> 657, 3-4 -> 460, 5-9 -> 251, 10+ -> 264
+a non-empty blob holds 9.64 cells (max 270); 94.3% of all cells sit in a blob with at least one other
+96.5% of the foreground area is inside a multi-cell blob
+Otsu finds 17356 blobs for 35192 cells -> a blob counter sees 49.3% of the cells; 75.3% of cells have their nearest neighbour within one cell diameter (13 px)
+foreground FRACTION per image: 0.685 +- 0.007 (min 0.662, max 0.703) | correlation with the true count -0.031
+   the field is saturated: the frame is ~68 % covered whether the image holds 74 cells or 317, so
+   the area of the bright region cannot be a count. What varies is the area each cell gets:
+      count  70-120  n= 46  foreground fraction 0.686   foreground px per cell   465 (3.7 lone cells)
+      count 120-170  n= 51  foreground fraction 0.685   foreground px per cell   314 (2.5 lone cells)
+      count 170-220  n= 54  foreground fraction 0.684   foreground px per cell   228 (1.8 lone cells)
+      count 220-270  n= 35  foreground fraction 0.685   foreground px per cell   186 (1.5 lone cells)
+      count 270-320  n= 14  foreground fraction 0.686   foreground px per cell   152 (1.2 lone cells)
+where the threshold actually sits: Otsu 0.252 is BELOW the median pixel value (0.290), so it does not separate cells from background - it cuts the background in half. 26.7% of the 'foreground' lies more than 12 px from any annotated centre (a cell is 13 px across), while 100% of the pixels within 3 px of a centre are foreground, as they should be
+
+==============================================================================
+6. WHAT A BLOB TELLS YOU ABOUT HOW MANY CELLS IT HOLDS
+==============================================================================
+cells in blob   blobs  median area  area / lone cell  area per cell / lone cell  median intensity  eccentricity
+            1    2019          126              1.00                       1.00             0.478          0.41
+            2     657          221              1.75                       0.88             0.505          0.81
+            3     300          336              2.67                       0.89             0.514          0.84
+            4     160          438              3.48                       0.87             0.534          0.84
+          5-6     154          564              4.48                       0.90             0.539          0.83
+         7-12     122          888              7.04                       0.88             0.552          0.84
+        13-30      36         1536             12.19                       0.81             0.577          0.82
+          31+     203        40619            322.37                       2.34             0.431          0.62
+two regimes. Up to ~6 cells a blob gains 104 px per extra cell, less than the 126 px a lone cell has - shared boundary, exactly the 'two overlapping cells are smaller than two circles' the task describes. Counted over every blob, though, the foreground per cell is 2.0 lone cells, because the dense images are one confluent sheet with bright haze between the cells: dividing blob area by a cell area therefore overcounts wildly (see section 8) and dividing the frame's area by one does not see the cells at all
+blob intensity grows only from 0.478 (one cell) to 0.492 (eight or more): brightness per pixel says almost nothing about how many cells are stacked, because the sheet is saturated - but the INTEGRAL over an image does, see section 8
+
+==============================================================================
+7. AND 8. THE COUNT DISTRIBUTION AND THE BASELINES, BEFORE ANY TRAINING
+==============================================================================
+count: train mean 181.5 sd 58.0 | test mean 171.5 sd 64.1 | the test set is the paper's, and its images are denser: -10 cells on average
+
+the two baselines the task names, then three hand-crafted ones that take overlap into account:
+constant: train mean                               MAE train   47.7  valid   50.1  TEST   56.1
+constant: train median                             MAE train   47.6  valid   50.2  TEST   57.1
+Otsu blobs, counted as they are                    MAE train  108.6  valid  109.1  TEST   94.6
+Otsu blobs, each split by its area / median cell   MAE train  240.1  valid  245.1  TEST  253.8
+foreground area / 247 px (one global scale)        MAE train   48.1  valid   50.0  TEST   56.0
+integral of the whole image (total brightness)     MAE train   19.1  valid   20.6  TEST   22.2
+integral above the image's own threshold           MAE train   19.1  valid   20.6  TEST   22.3
+
+the last two matter: fluorescence ADDS UP, so the total brightness of an image is nearly proportional to its cell count (correlation 0.991). One number fitted on the training set already beats both task baselines by 5x - which means a count MAE alone does NOT prove a network found the cells, and this study reports a localization metric next to it for that reason.
+
+blob count vs true count on test: correlation -0.692, mean ratio 0.65 -> it finds 65% of the cells, and is exactly right on 0% of the images
+figures -> task4_cells\figs\inspect_overlap.png and arrays -> task4_cells\figs\inspect_arrays.npz

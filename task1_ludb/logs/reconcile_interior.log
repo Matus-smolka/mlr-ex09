@@ -1,0 +1,12 @@
+ det  predicate counting as explained     interior  records (split)
+ 0.3  inside an annotated wave                  12  {73: 1, 94: 3, 103: 7, 110: 1}  73 (test), 94 (train), 103 (train), 110 (train)
+ 0.3  ...or within 50 of a QRS peak             11  {94: 3, 103: 7, 110: 1}  94 (train), 103 (train), 110 (train)
+ 0.4  inside an annotated wave                  12  {73: 1, 94: 3, 103: 7, 110: 1}  73 (test), 94 (train), 103 (train), 110 (train)
+ 0.4  ...or within 50 of a QRS peak             11  {94: 3, 103: 7, 110: 1}  94 (train), 103 (train), 110 (train)
+ 0.5  inside an annotated wave                  10  {73: 1, 94: 1, 103: 7, 110: 1}  73 (test), 94 (train), 103 (train), 110 (train)
+ 0.5  ...or within 50 of a QRS peak              9  {94: 1, 103: 7, 110: 1}  94 (train), 103 (train), 110 (train)
+
+still asserted to be BACKGROUND after the repair (the repaired label at the peak is 0 and no annotation comes within +-50 samples):
+  detector 0.3: 2 peaks in 2 records, 0 of them inside the annotated span (repair_ludb.py promises 0) and 2 in the 100-sample buffer or beyond
+  detector 0.4: 2 peaks in 2 records, 0 of them inside the annotated span (repair_ludb.py promises 0) and 2 in the 100-sample buffer or beyond
+  detector 0.5: 1 peaks in 1 records, 0 of them inside the annotated span (repair_ludb.py promises 0) and 1 in the 100-sample buffer or beyond

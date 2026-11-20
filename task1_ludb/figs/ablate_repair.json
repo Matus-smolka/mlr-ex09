@@ -1,0 +1,38 @@
+{
+ "A  as parsed (unannotated beats taught as background)": {
+  "as parsed": {
+   "P": 0.7413851484433883,
+   "QRS": 0.9007905195249559,
+   "T": 0.8306858567345139
+  },
+  "span + buffer": {
+   "P": 0.7631288230819446,
+   "QRS": 0.919403772461005,
+   "T": 0.8689280096862035
+  },
+  "beats": {
+   "annotated_found": 262,
+   "annotated_total": 288,
+   "edge_marked": 56,
+   "edge_total": 60
+  }
+ },
+ "B  repaired (those samples are -1)": {
+  "as parsed": {
+   "P": 0.7066479703699043,
+   "QRS": 0.8429473717411532,
+   "T": 0.8358078666457881
+  },
+  "span + buffer": {
+   "P": 0.7413487194985303,
+   "QRS": 0.9352364361973736,
+   "T": 0.8963335246566128
+  },
+  "beats": {
+   "annotated_found": 288,
+   "annotated_total": 288,
+   "edge_marked": 60,
+   "edge_total": 60
+  }
+ }
+}

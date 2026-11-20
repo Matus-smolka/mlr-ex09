@@ -1,0 +1,88 @@
+==================================================================================================
+0. the helpers this task builds on
+==================================================================================================
+the 24 signed permutations are orthogonal, have determinant +1, contain x,y,z and are closed under composition; the random SO(3) draws the same
+windows of 1000 samples at W=128 cover every sample exactly once; macro F1 and the confusion matrix match a case done by hand
+
+==================================================================================================
+1. what the 61 recordings are
+==================================================================================================
+61 recordings, 1122772 samples = 374.3 min, 30 people (users 1..30), experiments 1..61
+recordings per user: 29 users with 2, 1 with 3 (user 10)
+finite samples 1122772 of 1122772; values in [-2.010, 2.004]
+units: over the 360 still-class stretches the measured acceleration has size 1.020 g (sd 0.013, range 0.990..1.046)
+      -> the files are in g, not m/s2 (at rest a phone reads about 1 g, and the browser's Sensor gives m/s2, so the app has to convert)
+never saturated: |a| is at most 3.39 g anywhere in the 61 recordings
+      samples with |a| < 0.2 g (free fall, or a sensor that dropped out): 46 (0.0041%)
+      samples with |a| < 0.5 g (free fall, or a sensor that dropped out): 4212 (0.3751%)
+      samples with |a| < 0.8 g (free fall, or a sensor that dropped out): 80688 (7.1865%)
+      samples equal to the previous one on all three axes: 65338 (5.82%) - 63641 of them a single sample held for one extra sample, only 104 runs longer than 3, and the same 5.5%-6.1% share in every class and every recording. That is the phone's uneven timestamps landed on a regular grid, not a sensor losing movement
+sampling rate: 126 walking stretches repeat every 1.12 s (one full stride, 10th-90th pct 1.02-1.22 s), and their spectrum peaks at 1.67 Hz - twice that, the second step of the stride
+      -> a 1.1 s stride and a 3.6 s sit-to-stand are human. Read as 100 Hz they would be a 2.2 s stride and a 7.2 s sit-to-stand, and twice as slow again at 200 Hz: the files are at the 50 Hz the description gives
+
+==================================================================================================
+2. what the labels are
+==================================================================================================
+labelled 815614 samples (72.6%); -1 in the pauses 307158 (27.4%)
+pauses: 633 stretches, median 279.0 samples (5.6 s), longest 340 s; 511 of them lie between two activities, and every recording also has a median of 8 s before the first label and 337 s after the last
+      -> people do not start and stop on cue. Samples with -1 are never scored and never trained on as a class of their own.
+
+class        runs  samples  share  median s   10th   90th  longest
+walking       127   122091  15.0%      19.4   16.8   22.1     28.2
+upstairs      183   116707  14.3%      12.7   11.1   14.5     17.9
+downstairs    186   107961  13.2%      11.8    9.8   13.8     17.6
+sitting       120   126677  15.5%      20.8   16.3   27.0     32.4
+standing      120   138105  16.9%      22.6   17.3   29.4     40.6
+lying         120   136865  16.8%      22.1   17.3   29.7     33.9
+transition    358    67208   8.2%       3.6    2.5    5.2      9.9
+      -> a transition runs 3.6 s at the median against 20 s for an activity, and is 8.2% of the labelled samples. Six different movements are merged into it, and it is the shortest and rarest class: macro F1 is decided there, which is why the notebook asks for macro F1
+
+the order of the labelled stretches: experiment 1 starts ['stan', 'tran', 'sitt', 'tran', 'stan', 'tran', 'lyin', 'tran', 'sitt'] - activities separated by transitions, as the protocol says. 3 different patterns over the 61 recordings, the commonest shared by 58 of them
+recordings without all 7 classes: acc_exp20_user10.txt, acc_exp21_user10.txt (4 classes, 12 label rows, 232 s; 3 classes, 8 label rows, 198 s)
+      -> the subject stopped early. Nothing was lost by the parse: over all 61 recordings 0 labelled samples were overwritten by a later label row and 0 were painted past the end of the file
+train 41 recordings,  522690 labelled; per class {'walk': 81348, 'upst': 76651, 'down': 70006, 'sitt': 77954, 'stan': 86584, 'lyin': 84770, 'tran': 45377}
+valid 10 recordings,  147544 labelled; per class {'walk': 20398, 'upst': 19738, 'down': 18882, 'sitt': 24416, 'stan': 25982, 'lyin': 26305, 'tran': 11823}
+test  10 recordings,  145380 labelled; per class {'walk': 20345, 'upst': 20318, 'down': 19073, 'sitt': 24307, 'stan': 25539, 'lyin': 25790, 'tran': 10008}
+the baseline the notebook names - always answering standing: test accuracy 0.176, macro F1 0.043 (only standing gets an F1, 0.299); the notebook says about 0.18 and about 0.04
+
+==================================================================================================
+3. how the phone is worn: which way gravity points, per recording
+==================================================================================================
+the mean direction of gravity in the phone's own axes, pooled over the recordings:
+  sitting   [0.98  0.133 0.148]
+  standing  [ 0.987 -0.158 -0.013]
+  lying     [0.078 0.778 0.624]
+angles between them: sittin-standi 19 deg, sittin-lying 74 deg, standi-lying 93 deg
+  within sitting  , over its 60 recordings: median   9.7 deg from the pooled mean, 90th pct  17.6, worst  30.5
+  within standing , over its 60 recordings: median   8.3 deg from the pooled mean, 90th pct  15.2, worst  22.3
+  within lying    , over its 60 recordings: median  18.2 deg from the pooled mean, 90th pct  48.9, worst 121.8
+the same person's two recordings, same class: a median of 9.4 deg apart (90th pct 37.3, worst 170.8 for user 10 in lying) over 90 pairs -> the phone went back on roughly the same way, not exactly
+
+within one still class the phones point 10 deg apart at the median, while the three still classes sit 19-93 deg apart from each other.
+So the dataset does NOT contain the pocket-turning the task is about: the phone was belt-mounted at the waist, nearly the same way on everyone. Any honest test of an orientation-aware method means rotating held-out recordings by hand - which is what train_motion.py will do.
+
+==================================================================================================
+4. how much of the task lives in the axis order (nothing learned yet)
+==================================================================================================
+W = 256 samples (5.1 s): 1944 single-class training windows, 560 test windows whose samples all carry one label (a window that straddles a boundary or sits in a pause has no single answer; the real evaluation is per sample)
+
+nearest-class-average on which way down the window points (3 classes, 145380 -> 257 test windows scored):
+  as delivered (x,y,z): accuracy 0.848, macro F1 0.849; per class sitt 0.82, stan 0.82, lyin 0.90
+  the 24 turned phones: accuracy 0.047 (worst, -x,-z,-y) to 0.848 (best, x,y,z); 0 of the 23 beat the real orientation
+  turning the phone costs a median of 0.553 accuracy - the axis order carries most of what separates sitting from standing from lying
+
+nearest-class-average on mean and sd of each axis (7 classes, 145380 -> 560 test windows scored):
+  as delivered (x,y,z): accuracy 0.668, macro F1 0.656; per class walk 0.51, upst 0.35, down 0.68, sitt 0.82, stan 0.80, lyin 0.89, tran 0.53
+  the 24 turned phones: accuracy 0.021 (worst, -x,-z,-y) to 0.668 (best, x,y,z); 0 of the 23 beat the real orientation
+  turning the phone costs a median of 0.532 accuracy - the axis order carries most of what separates sitting from standing from lying
+
+==================================================================================================
+5. what the window length trades off
+==================================================================================================
+W =   64 samples ( 1.28 s): 11392 training windows on the 41 training recordings,  3.6% of all windows hold two classes,  7.9% hold a transition sample somewhere - the longer the window the more the labels inside it disagree, while the network has to answer each sample separately
+W =  128 samples ( 2.56 s):  5688 training windows on the 41 training recordings,  7.2% of all windows hold two classes, 10.0% hold a transition sample somewhere - the longer the window the more the labels inside it disagree, while the network has to answer each sample separately
+W =  256 samples ( 5.12 s):  2836 training windows on the 41 training recordings, 14.4% of all windows hold two classes, 14.0% hold a transition sample somewhere - the longer the window the more the labels inside it disagree, while the network has to answer each sample separately
+W =  512 samples (10.24 s):  1409 training windows on the 41 training recordings, 28.8% of all windows hold two classes, 21.8% hold a transition sample somewhere - the longer the window the more the labels inside it disagree, while the network has to answer each sample separately
+W = 1024 samples (20.48 s):   694 training windows on the 41 training recordings, 57.2% of all windows hold two classes, 35.7% hold a transition sample somewhere - the longer the window the more the labels inside it disagree, while the network has to answer each sample separately
+
+wrote inspect_test_recording.png, inspect_gravity.png, inspect_classes.png and results_inspect.json to task2_motion\figs

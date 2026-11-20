@@ -1,0 +1,65 @@
+
+==============================================================================
+1. HOW THE SIGNALS ARE STORED
+==============================================================================
+record   1: n unique values   325 | range 1.000000 | smallest step between consecutive values 0.000829 mV | lead II adc_gain 1206.0 baseline 2 units mV
+record   2: n unique values   321 | range 1.000000 | smallest step between consecutive values 0.000935 mV | lead II adc_gain 1069.0 baseline 1 units mV
+record 125: n unique values   578 | range 1.000000 | smallest step between consecutive values 0.000513 mV | lead II adc_gain 1950.0 baseline -7 units mV
+record 132: n unique values   599 | range 1.000000 | smallest step between consecutive values 0.000611 mV | lead II adc_gain 1638.0 baseline -18 units mV
+-> every record spans exactly 1.000 mV peak-to-peak; the absolute amplitude of a patient is not in the data.
+lead II range over all 200 records: min 1.000000 max 1.000000 -> exactly 1 mV in 200/200 records
+same in digital units: range 464-4075 vs adc_gain -> the peak-to-peak of every lead equals its own gain
+per-lead range of record 1 (12 leads): [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+metadata in the .hea comments, e.g. record 1: ['<age>: 51', '<sex>: F', '<diagnoses>:']
+
+==============================================================================
+2. ANNOTATIONS THE PARSER DROPS
+==============================================================================
+wave symbols NOT inside a ( symbol ) triplet: 14
+  record  94  N @   785  waves in y around it:  1 | context [0]N@785 [1])@866 [2](@908
+  record  94  N @  1285  waves in y around it:  2 | context [3]t@967 [4])@1024 [5]N@1285 [6])@1349 [7](@1420
+  record  94  N @  1785  waves in y around it:  2 | context [8]t@1465 [9])@1509 [10]N@1785 [11])@1866 [12](@1905
+  record  94  N @  2285  waves in y around it:  2 | context [13]t@1974 [14])@2026 [15]N@2285 [16])@2369 [17](@2408
+  record 103  N @   710  waves in y around it:  1 | context [0]N@710 [1])@784 [2](@865
+  record 103  N @  1166  waves in y around it:  2 | context [3]t@922 [4])@950 [5]N@1166 [6])@1240 [7](@1302
+  record 103  N @  1631  waves in y around it:  2 | context [8]t@1372 [9])@1400 [10]N@1631 [11])@1707 [12](@1795
+  record 103  N @  2099  waves in y around it:  2 | context [13]t@1842 [14])@1872 [15]N@2099 [16])@2174 [17](@2263
+  record 103  N @  2564  waves in y around it:  2 | context [18]t@2310 [19])@2342 [20]N@2564 [21])@2640 [22](@2733
+  record 103  N @  3014  waves in y around it:  2 | context [23]t@2775 [24])@2810 [25]N@3014 [26])@3093 [27](@3188
+  record 103  N @  3475  waves in y around it:  2 | context [28]t@3218 [29])@3263 [30]N@3475 [31])@3552 [32](@3624
+  record 103  N @  3937  waves in y around it:  2 | context [33]t@3679 [34])@3720 [35]N@3937 [36])@4012 [37](@4082
+  record 103  N @  4390  waves in y around it:  1 | context [38]t@4141 [39])@4182 [40]N@4390 [41])@4469
+  record 110  N @  3920  waves in y around it:  2 | context [34]t@3605 [35])@3655 [36]N@3920 [37](@3921 [38])@3993
+
+==============================================================================
+3. THE RECORD WITH NO ANNOTATED QRS
+==============================================================================
+record 103: 8 annotated waves, classes Counter({'T': 8}), label fractions [0.861 0.    0.    0.139]
+  standardized signal: min -4.74 max 5.11 std 1.00 | biggest |sample| at t=8.78 s
+  lead I : 51 annotations, 9 complete QRS triplets
+  lead II: 42 annotations, 0 complete QRS triplets
+  lead V1: 51 annotations, 9 complete QRS triplets
+  lead V6: 51 annotations, 9 complete QRS triplets
+
+==============================================================================
+4. LOW-AMPLITUDE / HIGH-DRIFT RECORDS
+==============================================================================
+QRS-to-drift is worst where the raw std is smallest (all records span the same 1 mV):
+  record 125 raw std 0.0347 mV | standardized range [-25.1, 3.7] | max |standardized| QRS sample 4.84
+  record 132 raw std 0.0367 mV | standardized range [-2.0, 25.3] | max |standardized| QRS sample 7.44
+  record 126 raw std 0.0482 mV | standardized range [-1.0, 19.8] | max |standardized| QRS sample 6.14
+  record 119 raw std 0.0499 mV | standardized range [-0.7, 19.3] | max |standardized| QRS sample 6.32
+  record 129 raw std 0.0536 mV | standardized range [-2.0, 16.6] | max |standardized| QRS sample 5.78
+records with standardized |x| above 6 somewhere: 147
+
+==============================================================================
+5. WIDTH OUTLIERS, LONG RR GAPS, PARTIAL BEATS AT THE EDGES
+==============================================================================
+P   : 10 waves above p99 = 162 ms, e.g. rec 12 176 ms @3.6s, rec 12 172 ms @5.6s, rec 12 164 ms @7.7s
+QRS : 18 waves above p99 = 168 ms, e.g. rec 12 170 ms @2.8s, rec 23 172 ms @3.6s, rec 44 200 ms @1.2s
+T   : 16 waves above p99 = 260 ms, e.g. rec 28 276 ms @2.1s, rec 28 294 ms @3.0s, rec 28 308 ms @4.0s
+longest R-R gap per record, top 5: [(997, 110), (820, 50), (800, 65), (752, 126), (710, 124)] (samples, record)
+records whose first sample is already inside a wave: 0/200 | whose last sample is: 0/200
+  class at sample 0: {}
+P peak -> its QRS peak: median 150 ms, p5-p95 113-794 ms
+T peak -> nearest P peak: median 401 ms, p5-p95 270-543 ms

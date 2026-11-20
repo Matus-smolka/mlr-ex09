@@ -1,0 +1,86 @@
+
+==============================================================================
+1. STRUCTURE
+==============================================================================
+records (200, 5000) signals, (200, 5000) labels | float32 signals, int64 labels
+samples per record: [5000] | sampling rate: [500] Hz
+label values present: [np.int64(0), np.int64(1), np.int64(2), np.int64(3)] = ['background', 'P', 'QRS', 'T']
+NaN in the raw signals: 0, records with NaN: 0
+standardized signals: min -25.12, max 25.30, non-finite values: 0
+per-record mean after standardization: n=200 p0=-0.377 p50=0.173 p100=0.377
+per-record std  after standardization: n=200 p0=1 p50=1 p100=1
+
+==============================================================================
+2. RAW SIGNAL QUALITY (lead II, in mV, before standardization)
+==============================================================================
+std   : n=200 p0=0.0347 p1=0.048 p50=0.115 p99=0.182 p100=0.241
+range : n=200 p0=1 p50=1 p100=1
+|median|: n=200 p0=0 p50=0.0196 p100=0.0606
+three lowest-amplitude records:
+  record  raw_std  raw_max   raw_min
+    125 0.034729 0.130798 -0.869202
+    132 0.036656 0.921053 -0.078947
+    126 0.048162 0.943740 -0.056260
+records whose coarse fingerprint equals another record's: 0
+
+==============================================================================
+3. ANNOTATION COMPLETENESS
+==============================================================================
+annotation marks in lead II: 14609 | used in a ( sym ) triplet: 14580 (99.8%) | ignored: 29
+ignored symbols: {'N': 14, ')': 14, '(': 1}
+waves per record: n=200 p0=8 p5=15 p50=22.5 p95=36 p100=42 | records with no wave at all: 0
+
+==============================================================================
+4. WAVE GEOMETRY (the cardiologists' triplets)
+==============================================================================
+class  waves width ms p5/p50/p95  max width ms peak inside [onset,offset]  non-positive width
+    P   1401      80 / 110 / 142           256                      1.000                   0
+  QRS   1817       70 / 92 / 138           250                      1.000                   0
+    T   1642     126 / 180 / 234           318                      1.000                   0
+records whose waves are listed in temporal order: 200/200
+waves starting before the record: 0 | ending after sample 4999: 0
+
+==============================================================================
+5. BEAT STRUCTURE
+==============================================================================
+R-R intervals: n=1618 p0=21.6 p5=36.4 p50=53.9 p95=69.6 p100=120 heart rate (bpm)
+QRS per record: n=200 p0=0 p5=6.95 p50=9 p95=13 p100=20
+QRS preceded by a P wave within 600 samples (1.2 s): 1408/1817 = 0.775 | records where every QRS has one: 13/200
+
+==============================================================================
+6. LABEL / ANNOTATION AGREEMENT (does y really encode the waves?)
+==============================================================================
+annotated samples overwritten by a later wave: 0 of 318662 (0.00%) -> {'QRS': 0, 'T': 0, 'P': 0}
+records most affected (record, samples lost): []
+P   : 1401 annotated waves -> 1401 contiguous blocks of that class in y (+0 fragments)
+QRS : 1817 annotated waves -> 1817 contiguous blocks of that class in y (+0 fragments)
+T   : 1642 annotated waves -> 1642 contiguous blocks of that class in y (+0 fragments)
+
+==============================================================================
+7. CLASS BALANCE, MISSING CLASSES, SPLITS
+==============================================================================
+overall sample fractions: {'background': np.float64(0.681), 'P': np.float64(0.079), 'QRS': np.float64(0.09), 'T': np.float64(0.15)}
+records with no P    wave:  24 -> rhythms: [(np.str_('Atrial fibrillation'), 15), (np.str_('Sinus rhythm'), 6), (np.str_('Atrial flutter, typical'), 3)]
+records with no QRS  wave:   1 -> rhythms: [(np.str_('Sinus rhythm'), 1)]
+records with no T    wave:   0 -> rhythms: []
+train 140 records, 3358 waves, fractions [0.686 0.077 0.089 0.149], median heart rate 56 bpm, rhythms {np.str_('Sinus rhythm'): 98, np.str_('Sinus bradycardia'): 19, np.str_('Atrial fibrillation'): 12}
+valid  30 records,  730 waves, fractions [0.682 0.083 0.089 0.147], median heart rate 55 bpm, rhythms {np.str_('Sinus rhythm'): 24, np.str_('Sinus arrhythmia'): 2, np.str_('Irregular sinus rhythm'): 1}
+test   30 records,  772 waves, fractions [0.661 0.084 0.096 0.159], median heart rate 56 bpm, rhythms {np.str_('Sinus rhythm'): 21, np.str_('Sinus bradycardia'): 5, np.str_('Atrial fibrillation'): 2}
+
+==============================================================================
+8. RHYTHMS (the only per-patient metadata)
+==============================================================================
+distinct first-listed rhythms: 7
+  143  Sinus rhythm                                       [TVT]  (T=v a=l i=n)
+   25  Sinus bradycardia                                  [TVT]  (T=v a=l i=n)
+   15  Atrial fibrillation                                [TVT]  (T=v a=l i=n)
+    8  Sinus arrhythmia                                   [TV.]  (T=v a=l i=n)
+    4  Sinus tachycardia                                  [T.T]  (T=v a=l i=n)
+    3  Atrial flutter, typical                            [TV.]  (T=v a=l i=n)
+    2  Irregular sinus rhythm                             [TV.]  (T=v a=l i=n)
+
+==============================================================================
+9. SPLIT INTEGRITY
+==============================================================================
+sizes: {'train': 140, 'valid': 30, 'test': 30} | pairwise disjoint: True | covers every record: True
+per-class test fractions: {'background': np.float64(0.661), 'P': np.float64(0.084), 'QRS': np.float64(0.096), 'T': np.float64(0.159)}

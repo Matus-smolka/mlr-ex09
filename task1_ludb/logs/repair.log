@@ -1,0 +1,15 @@
+span               keeps  72.9% of the samples | per split train 72.7%, valid 72.0%, test 75.1%
+span + 200 ms      keeps  76.9% of the samples | per split train 76.7%, valid 76.0%, test 79.1%
+signal +- 200 ms   keeps  93.6% of the samples | per split train 93.6%, valid 93.5%, test 93.8%
+masked inside the annotated span: 11 unlabelled QRS complexes in 3 records -> [94, 103, 110], splits [('train', 11), ('valid', 0), ('test', 0)]
+unlabelled QRS complexes the buffer lets back into the judged region: 2 in [94, 103] - counted as false positives, on purpose
+after the repair, unlabelled QRS-like peaks left inside the annotated span: 0 (must be 0)
+                              ...and left inside the 200 ms buffer: 2 (on purpose - a beat the network invents there is still counted as a false positive)
+
+class fractions among the kept samples:
+  before: {'background': np.float64(0.681), 'P': np.float64(0.079), 'QRS': np.float64(0.09), 'T': np.float64(0.15)}
+  after : {'background': np.float64(0.586), 'P': np.float64(0.102), 'QRS': np.float64(0.117), 'T': np.float64(0.195)}
+waves fully kept: 4858 of 4860; waves touched by the mask: 2
+wrote task1_ludb/cache/ludb_masked.npz
+wrote task1_ludb\figs\repair_edge_32.png
+wrote task1_ludb\figs\repair_interior_103.png

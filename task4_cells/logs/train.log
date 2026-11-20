@@ -1,0 +1,93 @@
+device cuda | torch 2.14.1+cu126 | 80 train / 20 valid / 100 test images
+================================================================================================
+1. THE TARGET SUMS TO THE COUNT (the notebook's check, on a few training images)
+================================================================================================
+ sigma   image  count  sum(target)    ratio  brightest px
+   1.0       1    135      135.000  1.00000        0.2557
+   1.0       2    233      233.000  1.00000        0.2585
+   1.0      25    315      315.000  1.00000        0.2558
+   1.0 all 200        ratio 1.00000 .. 1.00000   if the borders were zero-padded instead: 0.9836 .. 1.0000 (1.64% lost on the worst image)
+   1.5       1    135      135.000  1.00000        0.1276
+   1.5       2    233      233.000  1.00000        0.1544
+   1.5      25    315      315.000  1.00000        0.1366
+   1.5 all 200        ratio 1.00000 .. 1.00000   if the borders were zero-padded instead: 0.9768 .. 0.9997 (2.32% lost on the worst image)
+   2.0       1    135      135.000  1.00000        0.0768
+   2.0       2    233      233.000  1.00000        0.1115
+   2.0      25    315      315.000  1.00000        0.0976
+   2.0 all 200        ratio 1.00000 .. 1.00000   if the borders were zero-padded instead: 0.9713 .. 0.9991 (2.87% lost on the worst image)
+   3.0       1    135      135.000  1.00000        0.0409
+   3.0       2    233      233.000  1.00000        0.0602
+   3.0      25    315      315.000  1.00000        0.0667
+   3.0 all 200        ratio 1.00000 .. 1.00000   if the borders were zero-padded instead: 0.9623 .. 0.9972 (3.77% lost on the worst image)
+
+================================================================================================
+2. STAGE A - width of the bumps (4 runs, seed 0, 300 epochs, 4 levels, MSE, raw input, no augmentation)
+================================================================================================
+300 epochs in 598 s; best validation loss 0.0001 in epoch 247
+  A_sig1.0                           valid MAE  15.09  bias  -10.45  recall 0.825  precision 0.998  negative pixels 46.92%
+300 epochs in 1016 s; best validation loss 0.0000 in epoch 278
+  A_sig1.5                           valid MAE   9.81  bias   -8.65  recall 0.839  precision 0.981  negative pixels 48.04%
+300 epochs in 1280 s; best validation loss 0.0000 in epoch 294
+  A_sig2.0                           valid MAE  20.26  bias  -20.26  recall 0.813  precision 0.890  negative pixels 48.29%
+300 epochs in 1505 s; best validation loss 0.0000 in epoch 284
+  A_sig3.0                           valid MAE  12.08  bias  -11.95  recall 0.764  precision 0.620  negative pixels 40.48%
+stage A keeps sigma 1.5, widths [16, 32, 64, 128] (valid MAE 9.81); the others: A_sig1.5 9.81, A_sig3.0 12.08, A_sig1.0 15.09, A_sig2.0 20.26
+
+================================================================================================
+3. STAGE B - the loss and the last layer, on the stage-A winner
+================================================================================================
+300 epochs in 877 s; best validation loss 0.0000 in epoch 278
+  B_mse_none                         valid MAE   9.81  bias   -8.65  recall 0.839  precision 0.981  negative pixels 48.04%
+300 epochs in 654 s; best validation loss 0.0007 in epoch 300
+  B_mse_softplus                     valid MAE 1722.88  bias +1722.88  recall 0.833  precision 0.147  negative pixels 0.00%
+300 epochs in 591 s; best validation loss 0.0018 in epoch 233
+  B_l1_none                          valid MAE  31.42  bias  -31.42  recall 0.832  precision 0.999  negative pixels 57.12%
+300 epochs in 668 s; best validation loss 0.0002 in epoch 298
+  B_mse+100_none                     valid MAE  16.43  bias  -15.20  recall 0.885  precision 0.353  negative pixels 46.47%
+300 epochs in 575 s; best validation loss 0.0008 in epoch 298
+  B_mse+1000_none                    valid MAE  16.27  bias   +3.29  recall 0.870  precision 0.259  negative pixels 48.26%
+stage B keeps loss 'mse' and last layer 'none' (valid MAE 9.81); B_mse_none 9.81, B_mse+1000_none 16.27, B_mse+100_none 16.43, B_l1_none 31.42, B_mse_softplus 1722.88
+
+================================================================================================
+4. STAGE C - what the network is allowed to see, and how the images are varied
+================================================================================================
+   'raw' leaves the total brightness in the image (the leak); 'zscore' removes it, so the
+   count can only come from where the light is. 'jitter' is the same lesson taught by data.
+300 epochs in 545 s; best validation loss 0.0000 in epoch 278
+  C_raw                              valid MAE   9.81  bias   -8.65  recall 0.839  precision 0.981  negative pixels 48.04%
+300 epochs in 581 s; best validation loss 0.0000 in epoch 282
+  C_raw+jit                          valid MAE  32.17  bias  +32.17  recall 0.838  precision 0.972  negative pixels 40.52%
+300 epochs in 585 s; best validation loss 0.0000 in epoch 276
+  C_zscore+jit                       valid MAE  17.90  bias  -16.70  recall 0.840  precision 0.948  negative pixels 52.94%
+stage C keeps input 'raw', augment False on the count MAE (valid MAE 9.81); the best localization in the same stage was 'raw' at F1 0.905 / MAE 9.81 - both arms are carried to the test split.
+
+================================================================================================
+5. STAGE D - learning rate, and a wider net at the winner's shape
+================================================================================================
+300 epochs in 601 s; best validation loss 0.0000 in epoch 290
+  D_lr3e-04                          valid MAE  16.08  bias  +10.32  recall 0.842  precision 0.811  negative pixels 43.91%
+300 epochs in 555 s; best validation loss 0.0000 in epoch 246
+  D_lr3e-03                          valid MAE  21.56  bias  -21.56  recall 0.848  precision 0.998  negative pixels 59.67%
+300 epochs in 1016 s; best validation loss 0.0000 in epoch 286
+  D_wide                             valid MAE  43.26  bias  +43.26  recall 0.852  precision 0.968  negative pixels 30.78%
+chosen arm: {"sigma": 1.5, "widths": [16, 32, 64, 128], "head": "none", "loss": "mse", "input": "raw", "augment": false, "lr": 0.001} -> valid MAE 9.81
+
+================================================================================================
+6. THE CHOSEN ARM x3 SEEDS, then the TEST split evaluated once (15 arms were tried on validation to get here)
+================================================================================================
+300 epochs in 549 s; best validation loss 0.0000 in epoch 278
+300 epochs in 587 s; best validation loss 0.0000 in epoch 289
+300 epochs in 639 s; best validation loss 0.0000 in epoch 300
+  cells_e300                         valid MAE   6.08  bias   -5.82  recall 0.842  precision 0.992  negative pixels 48.04%
+   seed 0: validation MAE 9.81, best epochs 550 s, 0.5 M parameters
+   seed 1: validation MAE 7.86, best epochs 588 s, 0.5 M parameters
+   seed 2: validation MAE 15.99, best epochs 640 s, 0.5 M parameters
+
+  seed  train MAE  valid MAE  TEST MAE  TEST RMSE    bias      R2  worst  recall   prec     F1
+     0       8.54       9.81     10.85      14.23   -8.70   0.950     44   0.838  0.982  0.904
+     1       8.52       7.86      8.75      10.50   +7.74   0.973     23   0.837  0.876  0.856
+     2      15.78      15.99     15.35      20.38  -14.86   0.898     55   0.847  0.979  0.908
+seed spread on test: 8.75 .. 15.35 (mean 11.65) - this is the noise floor of the arm itself, read every difference smaller than it with care
+ensemble                            5.98       7.71   -5.27   0.985     26   0.843  0.993  0.912
+
+wrote task4_cells\figs\results_net.json, preds_test.npz and model_cells_e300_seed*.pt

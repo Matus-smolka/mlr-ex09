@@ -1,0 +1,194 @@
+# cells 50..58 of ex09_student.ipynb, matched 'Task 2' at cell 51
+
+--- cell 50 [code] 0 chars ---
+
+
+--- cell 51 [markdown] 1525 chars ---
+### Task 2 — Activity from the phone's accelerometer (1D, a class for every sample)
+
+Every phone has an accelerometer, and a fitness app tells walking from
+climbing stairs from sitting. Here the network labels **every sample** of
+the acceleration with one of six activities or a transition between them
+— the protein example of Part 1, on a body signal. Then **your own model runs
+on your phone**: the course app reads the accelerometer in the browser, runs
+your network on it and draws a colour-coded timeline of what you did.
+
+**Data:** UCI HAPT, *Smartphone-Based Recognition of Human Activities and
+Postural Transitions* (Reyes-Ortiz, Oneto, Samà, Parra, Anguita;
+[UCI repository](https://archive.ics.uci.edu/dataset/341)):
+30 people with a smartphone on the waist, the 3-axis acceleration in **g**
+at **50 Hz**, 61 recordings of a few minutes. Every sample is labelled
+walking, upstairs, downstairs, sitting, standing, lying, or one of six
+postural transitions (sit-to-stand, …, merged here into one class
+`transition`); the samples between the labelled activities have the label
+−1. The cell downloads the 80 MB zip and keeps only the accelerometer
+files. It gives
+
+- `HAPT_CLASSES` — the seven class names, `HAPT_COLORS` — their colours in the app;
+- `hapt` — every recording as `(experiment, user, acceleration, labels)`, the acceleration of shape `(T, 3)` in g, the labels `(T,)` with values 0–6 or −1;
+- `hapt_split` — the recordings of users 1–20 (training), 21–25 (validation) and 26–30 (test): a split by person.
+
+--- cell 52 [code] 2810 chars ---
+HAPT_URL = ("https://archive.ics.uci.edu/static/public/341/"
+            "smartphone+based+recognition+of+human+activities+and+postural+transitions.zip")
+HAPT = Path("data/hapt")
+if len(list(HAPT.glob("acc_exp*_user*.txt"))) != 61 or not (HAPT / "labels.txt").exists():
+    os.makedirs(HAPT, exist_ok=True)
+    urllib.request.urlretrieve(HAPT_URL, "data/hapt.zip")       # 80 MB
+    with zipfile.ZipFile("data/hapt.zip") as z:                 # only the accelerometer and the labels
+        for name in z.namelist():
+            if name.startswith("RawData/acc_") or name == "RawData/labels.txt":
+                (HAPT / Path(name).name).write_bytes(z.read(name))
+    os.remove("data/hapt.zip")
+
+HAPT_CLASSES = ["walking", "upstairs", "downstairs", "sitting", "standing", "lying", "transition"]
+HAPT_COLORS = ["#2a9d8f", "#e76f51", "#f4a261", "#457b9d", "#8ab17d", "#9b5de5", "#adb5bd"]
+labels_txt = np.loadtxt(HAPT / "labels.txt", dtype=int)       # experiment, user, activity 1-12, first and last sample (from 1)
+hapt = []
+for f in sorted(HAPT.glob("acc_exp*_user*.txt")):
+    exp, user = int(f.stem[7:9]), int(f.stem[-2:])
+    acc = np.loadtxt(f, dtype=np.float32)                      # (T, 3): x, y, z in g
+    lab = np.full(len(acc), -1)                                # -1: between the labelled activities
+    for _, _, activity, first, last in labels_txt[labels_txt[:, 0] == exp]:
+        lab[first - 1:last] = activity - 1 if activity <= 6 else 6     # the six transitions -> one class
+    hapt.append((exp, user, acc, lab))
+users = {"train": range(1, 21), "valid": range(21, 26), "test": range(26, 31)}
+hapt_split = {s: [r for r in hapt if r[1] in u] for s, u in users.items()}
+for s, recs in hapt_split.items():
+    lab = np.concatenate([r[3] for r in recs])
+    print(f"{s:5s} {len(recs)} recordings, {len(lab)} samples; labels -1, 0-6:", np.bincount(lab + 1))
+
+exp, user, acc, lab = hapt_split["train"][0]
+t = np.arange(len(acc)) / 50
+fig, axes = plt.subplots(2, 1, figsize=(12, 3.4), sharex=True, gridspec_kw={"height_ratios": [3, 0.5]})
+for k, axis in enumerate("xyz"):
+    axes[0].plot(t, acc[:, k], linewidth=0.6, label=axis)
+axes[0].set_ylabel("acceleration (g)")
+axes[0].legend(ncol=3, fontsize=8, loc="upper right")
+axes[0].set_title(f"HAPT experiment {exp}, user {user}", fontsize=10)
+axes[1].imshow(np.ma.masked_less(lab[None], 0), aspect="auto", cmap=plt.matplotlib.colors.ListedColormap(HAPT_COLORS),
+               vmin=-0.5, vmax=6.5, extent=[0, t[-1], 0, 1], interpolation="nearest")
+axes[1].set_yticks([])
+axes[1].set_xlabel("time (s); white = no label")
+fig.legend(handles=[plt.matplotlib.patches.Patch(color=c, label=n) for n, c in zip(HAPT_CLASSES, HAPT_COLORS)],
+           loc="lower center", ncol=7, fontsize=8, frameon=False)
+plt.tight_layout(rect=[0, 0.07, 1, 1])
+plt.show()
+
+--- cell 53 [markdown] 240 chars ---
+**Your specification** — fill it in before you ask the agent for any code:
+
+| | your answer |
+| --- | --- |
+| network input (shape) | |
+| network output (shape) | |
+| last layer | |
+| training loss | |
+| evaluation metric | |
+| baseline | |
+
+--- cell 54 [markdown] 1603 chars ---
+**Baseline and target.** Always answering the most frequent class of the
+training set (*standing*) gives a test accuracy of about 0.18 and a
+**macro F1 of about 0.04** (macro F1 is the mean of the F1 scores of the
+seven classes, so a rare class counts as much as a frequent one). A 1D
+U-Net reaches a macro F1 **around 0.9** on the test users.
+
+**Your model on your phone.**
+
+1. Export the trained network to ONNX, as in exercise 8: input
+   `1 × 3 × window` (the axes x, y, z), output `1 × 7 × window` logits, with
+   the metadata `model_info` that tells the app how to feed it — the class
+   names, the units the network was trained on (`"g"` or `"m/s2"`; the
+   browser gives m/s²), the sampling rate in Hz, the window length and the
+   axis order. The section *How to export your model* of the app shows the code.
+2. Open the [activity app of the course](https://tomasvicar.github.io/MLR-public/apps/activity/)
+   on your phone, load your `.onnx` file, tap *Start* and put the phone on your waist.
+3. Do a short script — stand 20 s, walk 30 s, sit 20 s, take the stairs, lie
+   down on a bench — then tap *Stop*: the app draws the timeline and lets you
+   download it as CSV.
+
+*Simulate* replays a recording of a test user, so the app can be tried on a laptop.
+
+**What to show:**
+
+- your specification table;
+- the macro F1 and the per-class F1 on the test users, the confusion matrix, next to the baseline;
+- the true and the predicted timeline of one test recording;
+- the timeline of your own recording from the app, next to the script you did, and one or two sentences on where it fails and why.
+
+--- cell 55 [markdown] 102 chars ---
+*Your agent's code goes into the cells below (add as many as you need), or into a script of your own.*
+
+--- cell 56 [code] 0 chars ---
+
+
+--- cell 57 [markdown] 1727 chars ---
+### Task 3 — Calcium imaging → spikes (1D signal-to-signal regression)
+
+A neuron communicates with **spikes**, electrical pulses about 1 ms long.
+With a microscope, neuroscientists record hundreds of neurons at once
+through a **calcium indicator**: a dye that glows when calcium enters the
+neuron after a spike. The fluorescence rises within tens of milliseconds
+and decays over hundreds, so the recording is a slow, noisy, smeared
+version of the spike train. Getting the spikes back is a deconvolution — a
+1D U-Net that maps the fluorescence to a **spike rate**, sample by sample.
+
+**Data:** the training part of the **spikefinder** challenge (Berens et al.
+2018, [PLoS Comput Biol 14: e1006157](https://doi.org/10.1371/journal.pcbi.1006157);
+[github.com/codeneuro/spikefinder](https://github.com/codeneuro/spikefinder)),
+in which convolutional networks won: 174 neurons in 10 datasets (different
+labs and indicators), each with the fluorescence and, recorded electrically
+at the same time, the true spikes; everything at 100 Hz. The cell
+downloads it from the challenge's own address (35 MB). It gives
+
+- `sf_calcium[ds]`, `sf_spikes[ds]` for the datasets `ds` = 1 … 10 — tables
+  with one column per neuron: the fluorescence, and the number of spikes in
+  every 10-ms sample. Recordings differ in length; a column ends with NaN
+  where its recording is over;
+- `sf_split` — the neurons of the training, validation and test set as
+  `(dataset, column)` pairs, split by neuron inside every dataset.
+
+The **metric** of the challenge: the predicted rate and the true spike
+counts are both summed into bins of 40 ms (25 Hz), and their Pearson
+correlation is computed for every test neuron; the score is the mean over
+the neurons.
+
+--- cell 58 [code] 2135 chars ---
+SF_URL = "https://s3.amazonaws.com/neuro.datasets/challenges/spikefinder/spikefinder.train.zip"
+SF = Path("data/spikefinder/spikefinder.train")
+if len(list(SF.glob("*.train.*.csv"))) != 20:
+    os.makedirs("data/spikefinder", exist_ok=True)
+    urllib.request.urlretrieve(SF_URL, "data/spikefinder.zip")      # 35 MB
+    zipfile.ZipFile("data/spikefinder.zip").extractall("data/spikefinder")
+    os.remove("data/spikefinder.zip")
+
+SF_FS = 100                                                         # Hz
+sf_calcium = {ds: pd.read_csv(SF / f"{ds}.train.calcium.csv") for ds in range(1, 11)}
+sf_spikes = {ds: pd.read_csv(SF / f"{ds}.train.spikes.csv") for ds in range(1, 11)}
+neurons = [(ds, j) for ds in range(1, 11) for j in range(sf_calcium[ds].shape[1])]
+rng = np.random.default_rng(0)
+sf_split = {"train": [], "valid": [], "test": []}                 # split by neuron inside every dataset
+for ds in range(1, 11):
+    idx = rng.permutation([k for k, n in enumerate(neurons) if n[0] == ds])
+    n_test, n_val = max(1, round(0.2 * len(idx))), max(1, round(0.1 * len(idx)))
+    sf_split["test"] += [neurons[k] for k in idx[:n_test]]
+    sf_split["valid"] += [neurons[k] for k in idx[n_test:n_test + n_val]]
+    sf_split["train"] += [neurons[k] for k in idx[n_test + n_val:]]
+hours = sum(sf_calcium[ds].iloc[:, j].notna().sum() for ds, j in neurons) / SF_FS / 3600
+print(f"{len(neurons)} neurons, {hours:.1f} hours;", {s: len(v) for s, v in sf_split.items()})
+
+ds, j = sf_split["train"][0]
+calcium, spikes = sf_calcium[ds].iloc[:, j].to_numpy(), sf_spikes[ds].iloc[:, j].to_numpy()
+part = slice(30 * SF_FS, 60 * SF_FS)
+t = np.arange(len(calcium)) / SF_FS
+fig, axes = plt.subplots(2, 1, figsize=(12, 3.6), sharex=True)
+axes[0].plot(t[part], calcium[part], color="tab:green", linewidth=0.8)
+axes[0].set_ylabel("fluorescence")
+axes[0].set_title(f"dataset {ds}, neuron {j}: 30 s of {np.isfinite(calcium).sum() / SF_FS:.0f} s", fontsize=10)
+axes[1].vlines(t[part][spikes[part] > 0], 0, spikes[part][spikes[part] > 0], color="k", linewidth=1)
+axes[1].set_ylabel("spikes per 10 ms")
+axes[1].set_xlabel("time (s)")
+plt.tight_layout()
+plt.show()
+

@@ -1,0 +1,83 @@
+device cuda | torch 2.14.1+cu126
+one training sample: signal (1, 5000) torch.float32, labels (5000,) torch.int64, classes present [-1, 0, 1, 2, 3]
+140 training records, 9 batches per epoch; samples the loss skips: 23.3%
+
+the bar to clear on validation: classical baseline P 0.679  / QRS 0.900  / T 0.810 = 0.796
+
+4 levels, width [16, 32, 64, 128], augment False, 0.2 M parameters
+120 epochs in 14 s; best validation loss 0.2924 in epoch 45
+
+4 levels, width [16, 32, 64, 128], augment True, 0.2 M parameters
+120 epochs in 16 s; best validation loss 0.2665 in epoch 100
+
+5 levels, width [16, 32, 64, 128, 256], augment False, 0.7 M parameters
+120 epochs in 21 s; best validation loss 0.2398 in epoch 29
+
+5 levels, width [16, 32, 64, 128, 256], augment True, 0.7 M parameters
+120 epochs in 24 s; best validation loss 0.2196 in epoch 96
+
+6 levels, width [16, 32, 64, 128, 256, 512], augment False, 2.7 M parameters
+120 epochs in 31 s; best validation loss 0.2350 in epoch 31
+
+6 levels, width [16, 32, 64, 128, 256, 512], augment True, 2.7 M parameters
+120 epochs in 34 s; best validation loss 0.1905 in epoch 82
+
+7 levels, width [8, 16, 32, 64, 128, 256, 512], augment False, 2.7 M parameters
+120 epochs in 25 s; best validation loss 0.2569 in epoch 40
+
+7 levels, width [8, 16, 32, 64, 128, 256, 512], augment True, 2.7 M parameters
+120 epochs in 28 s; best validation loss 0.1853 in epoch 106
+
+7 wide, width [16, 32, 64, 128, 256, 512, 1024], augment False, 10.9 M parameters
+120 epochs in 52 s; best validation loss 0.2259 in epoch 33
+
+7 wide, width [16, 32, 64, 128, 256, 512, 1024], augment True, 10.9 M parameters
+120 epochs in 53 s; best validation loss 0.1772 in epoch 103
+
+validation sweep, judged under the reported convention (the winner is the model we keep):
+  depth      augment  lr      parameters   validation macro Dice P/QRS/T   mean
+  7 levels   True     1e-03        2.7 M   P 0.886  / QRS 0.952  / T 0.914   0.917
+  7 wide     True     1e-03       10.9 M   P 0.867  / QRS 0.953  / T 0.918   0.913
+  6 levels   True     1e-03        2.7 M   P 0.861  / QRS 0.949  / T 0.909   0.906
+  7 levels   False    1e-03        2.7 M   P 0.858  / QRS 0.945  / T 0.909   0.904
+  7 wide     False    1e-03       10.9 M   P 0.836  / QRS 0.955  / T 0.911   0.901
+  6 levels   False    1e-03        2.7 M   P 0.827  / QRS 0.949  / T 0.911   0.896
+  5 levels   False    1e-03        0.7 M   P 0.835  / QRS 0.953  / T 0.885   0.891
+  5 levels   True     1e-03        0.7 M   P 0.824  / QRS 0.951  / T 0.881   0.885
+  4 levels   True     1e-03        0.2 M   P 0.781  / QRS 0.945  / T 0.827   0.851
+  4 levels   False    1e-03        0.2 M   P 0.762  / QRS 0.941  / T 0.821   0.842
+
+learning rate for the winning depth ([8, 16, 32, 64, 128, 256, 512]), still on validation:
+120 epochs in 25 s; best validation loss 0.3086 in epoch 115
+  lr 3e-04   P 0.825  / QRS 0.943  / T 0.887   0.885
+120 epochs in 26 s; best validation loss 0.1857 in epoch 59
+  lr 3e-03   P 0.817  / QRS 0.953  / T 0.918   0.896
+120 epochs in 24 s; best validation loss 0.1785 in epoch 70
+  lr 1e-02   P 0.862  / QRS 0.949  / T 0.915   0.909
+
+chosen: UNet(1, 1, 4, [8, 16, 32, 64, 128, 256, 512]), augment=True, lr=1e-03, 120 epochs with the best validation epoch kept -> validation P 0.886  / QRS 0.952  / T 0.914 = 0.917, baseline 0.796
+
+TEST split (30 patients): macro Dice of every wave, network next to baseline
+  judged as 'span + buffer'   <- the convention we report
+    P    network 0.717 (micro 0.806, 29 records)   baseline 0.603 (micro 0.608)   +0.115
+    QRS  network 0.939 (micro 0.939, 30 records)   baseline 0.858 (micro 0.851)   +0.082
+    T    network 0.906 (micro 0.906, 30 records)   baseline 0.813 (micro 0.812)   +0.093
+    mean  network 0.854 vs baseline 0.758
+  judged as 'span, no buffer'
+    P    network 0.757 (micro 0.843, 29 records)   baseline 0.637 (micro 0.642)   +0.120
+    QRS  network 0.942 (micro 0.942, 30 records)   baseline 0.862 (micro 0.854)   +0.080
+    T    network 0.930 (micro 0.929, 30 records)   baseline 0.836 (micro 0.833)   +0.094
+    mean  network 0.876 vs baseline 0.778
+  judged as 'signal edges'
+    P    network 0.666 (micro 0.760, 29 records)   baseline 0.552 (micro 0.549)   +0.114
+    QRS  network 0.847 (micro 0.850, 30 records)   baseline 0.780 (micro 0.784)   +0.067
+    T    network 0.822 (micro 0.828, 30 records)   baseline 0.745 (micro 0.750)   +0.076
+    mean  network 0.778 vs baseline 0.692
+  judged as 'as parsed'
+    P    network 0.657 (micro 0.741, 29 records)   baseline 0.544 (micro 0.541)   +0.112
+    QRS  network 0.846 (micro 0.852, 30 records)   baseline 0.773 (micro 0.773)   +0.073
+    T    network 0.790 (micro 0.797, 30 records)   baseline 0.717 (micro 0.723)   +0.073
+    mean  network 0.764 vs baseline 0.678
+  sanity, a network that answers background everywhere: P 0.000  / QRS 0.000  / T 0.000
+
+wrote task1_ludb\figs\results.json, one_test_record.png, qrs_duration.png, worst_records.png, dice_per_record.png and model_ludb.pt

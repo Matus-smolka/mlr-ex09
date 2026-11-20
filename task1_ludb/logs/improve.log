@@ -1,0 +1,105 @@
+device cuda | torch 2.14.1+cu126 | cudnn deterministic True
+inherited recipe: UNet(1, n_leads, 4, [8, 16, 32, 64, 128, 256, 512]), lr 1e-03, augment True, 120 epochs, seeds (0, 1, 2)
+leads available ['I', 'II', 'III', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+  lead sets tried: lead II ['II'], II+V1+V5 ['II', 'V1', 'V5'], all 12 ['I', 'II', 'III', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+class fractions among the 536584 trained-on samples [0.59  0.1   0.116 0.194] -> loss weights [0.539 1.309 1.214 0.939]
+the bar to clear on validation: classical baseline P 0.679  / QRS 0.900  / T 0.810 = 0.796
+
+round 1, which leads and which loss, seed 0:
+120 epochs in 20 s; best validation loss 0.1904 in epoch 101
+  lead II   CE                   seed 0   P 0.858  / QRS 0.950  / T 0.911   0.906
+120 epochs in 22 s; best validation loss 0.3099 in epoch 110
+  lead II   CE + dice            seed 0   P 0.860  / QRS 0.952  / T 0.914   0.909
+120 epochs in 25 s; best validation loss 0.1928 in epoch 117
+  II+V1+V5  CE                   seed 0   P 0.868  / QRS 0.946  / T 0.917   0.910
+120 epochs in 27 s; best validation loss 0.3127 in epoch 90
+  II+V1+V5  CE + dice            seed 0   P 0.836  / QRS 0.945  / T 0.913   0.898
+120 epochs in 65 s; best validation loss 0.2058 in epoch 117
+  all 12    CE                   seed 0   P 0.853  / QRS 0.948  / T 0.911   0.904
+120 epochs in 71 s; best validation loss 0.4483 in epoch 118
+  all 12    CE + dice            seed 0   P 0.860  / QRS 0.946  / T 0.901   0.902
+
+round 1 ranked:
+  leads     loss                 seeds  mean    sd      validation P/QRS/T of its best seed
+  II+V1+V5  CE                   1      0.910   0.000   P 0.868  / QRS 0.946  / T 0.917
+  lead II   CE + dice            1      0.909   0.000   P 0.860  / QRS 0.952  / T 0.914
+  lead II   CE                   1      0.906   0.000   P 0.858  / QRS 0.950  / T 0.911
+  all 12    CE                   1      0.904   0.000   P 0.853  / QRS 0.948  / T 0.911
+
+round 2, class weights added to the two best arms, seed 0:
+120 epochs in 30 s; best validation loss 0.1876 in epoch 104
+  II+V1+V5  CE + weights         seed 0   P 0.865  / QRS 0.936  / T 0.909   0.903
+120 epochs in 27 s; best validation loss 0.2897 in epoch 119
+  lead II   CE + dice + weights  seed 0   P 0.862  / QRS 0.952  / T 0.910   0.908
+
+round 2 ranked:
+  leads     loss                 seeds  mean    sd      validation P/QRS/T of its best seed
+  II+V1+V5  CE                   1      0.910   0.000   P 0.868  / QRS 0.946  / T 0.917
+  lead II   CE + dice            1      0.909   0.000   P 0.860  / QRS 0.952  / T 0.914
+  lead II   CE + dice + weights  1      0.908   0.000   P 0.862  / QRS 0.952  / T 0.910
+  lead II   CE                   1      0.906   0.000   P 0.858  / QRS 0.950  / T 0.911
+
+round 3, seeds (1, 2) for the two best arms - this is the noise floor of the whole comparison:
+120 epochs in 30 s; best validation loss 0.2051 in epoch 97
+  II+V1+V5  CE                   seed 1   P 0.833  / QRS 0.946  / T 0.909   0.896
+120 epochs in 31 s; best validation loss 0.2065 in epoch 117
+  II+V1+V5  CE                   seed 2   P 0.855  / QRS 0.943  / T 0.913   0.904
+120 epochs in 28 s; best validation loss 0.3080 in epoch 111
+  lead II   CE + dice            seed 1   P 0.863  / QRS 0.950  / T 0.913   0.909
+120 epochs in 29 s; best validation loss 0.3145 in epoch 119
+  lead II   CE + dice            seed 2   P 0.857  / QRS 0.951  / T 0.913   0.907
+
+the two arms with all 3 seeds - the final choice is made between these:
+  leads     loss                 seeds  mean    sd      validation P/QRS/T of its best seed
+  lead II   CE + dice            3      0.908   0.001   P 0.860  / QRS 0.952  / T 0.914
+  II+V1+V5  CE                   3      0.903   0.006   P 0.868  / QRS 0.946  / T 0.917
+
+chosen arm: lead II [II], loss CE + dice -> validation P 0.860  / QRS 0.952  / T 0.914, mean over seeds 0.908 +- 0.001 (baseline 0.796)
+
+inference-time options, validation, nothing retrained:
+  1 model(s), 1 shift(s), merge runs <  0 samples (0 ms): P 0.860  / QRS 0.952  / T 0.914   0.909
+  1 model(s), 1 shift(s), merge runs <  5 samples (10 ms): P 0.860  / QRS 0.952  / T 0.914   0.909
+  1 model(s), 1 shift(s), merge runs < 10 samples (20 ms): P 0.859  / QRS 0.952  / T 0.915   0.909
+  1 model(s), 5 shift(s), merge runs <  0 samples (0 ms): P 0.866  / QRS 0.953  / T 0.914   0.911
+  1 model(s), 5 shift(s), merge runs <  5 samples (10 ms): P 0.866  / QRS 0.953  / T 0.914   0.911
+  1 model(s), 5 shift(s), merge runs < 10 samples (20 ms): P 0.865  / QRS 0.953  / T 0.914   0.911
+  3 model(s), 1 shift(s), merge runs <  0 samples (0 ms): P 0.869  / QRS 0.954  / T 0.920   0.914
+  3 model(s), 1 shift(s), merge runs <  5 samples (10 ms): P 0.869  / QRS 0.954  / T 0.920   0.914
+  3 model(s), 1 shift(s), merge runs < 10 samples (20 ms): P 0.868  / QRS 0.954  / T 0.920   0.914
+  3 model(s), 5 shift(s), merge runs <  0 samples (0 ms): P 0.868  / QRS 0.954  / T 0.919   0.914
+  3 model(s), 5 shift(s), merge runs <  5 samples (10 ms): P 0.868  / QRS 0.954  / T 0.919   0.914
+  3 model(s), 5 shift(s), merge runs < 10 samples (20 ms): P 0.868  / QRS 0.954  / T 0.918   0.913
+  chosen at inference: 3 model(s), 1 shift(s), merge below 0 samples
+
+the saved lead-II model reproduces figs/results.json: P 0.717 vs 0.717, QRS 0.939 vs 0.939, T 0.906 vs 0.906
+
+TEST split (30 patients), macro Dice, network next to the classical baseline
+  judged as 'span + buffer'   <- the convention we report
+    P    network 0.782 (micro 0.843, 28 records)   baseline 0.603 (micro 0.608)   +0.179
+    QRS  network 0.942 (micro 0.941, 30 records)   baseline 0.858 (micro 0.851)   +0.084
+    T    network 0.904 (micro 0.904, 30 records)   baseline 0.813 (micro 0.812)   +0.090
+    mean  network 0.876 vs baseline 0.758
+  judged as 'span, no buffer'
+    P    network 0.825 (micro 0.884, 28 records)   baseline 0.637 (micro 0.642)   +0.188
+    QRS  network 0.945 (micro 0.944, 30 records)   baseline 0.862 (micro 0.854)   +0.083
+    T    network 0.928 (micro 0.927, 30 records)   baseline 0.836 (micro 0.833)   +0.091
+    mean  network 0.899 vs baseline 0.778
+  judged as 'signal edges'
+    P    network 0.725 (micro 0.788, 28 records)   baseline 0.552 (micro 0.549)   +0.172
+    QRS  network 0.850 (micro 0.853, 30 records)   baseline 0.780 (micro 0.784)   +0.071
+    T    network 0.819 (micro 0.826, 30 records)   baseline 0.745 (micro 0.750)   +0.074
+    mean  network 0.798 vs baseline 0.692
+  judged as 'as parsed'
+    P    network 0.713 (micro 0.772, 28 records)   baseline 0.544 (micro 0.541)   +0.169
+    QRS  network 0.849 (micro 0.854, 30 records)   baseline 0.773 (micro 0.773)   +0.076
+    T    network 0.789 (micro 0.796, 30 records)   baseline 0.717 (micro 0.723)   +0.072
+    mean  network 0.784 vs baseline 0.678
+
+  under 'span + buffer', for context, on the same test records:
+    lead II, the primary model of train_ludb.py: P 0.717  / QRS 0.939  / T 0.906   mean 0.854
+    this arm, one seed, no test-time tricks: P 0.723  / QRS 0.941  / T 0.896   mean 0.853
+  this arm, the 3 seeds one at a time: mean 0.862 +- 0.008, individually 0.853, 0.872, 0.862
+  this arm, final (3 model(s), 1 shift(s), merge < 0 samples): P 0.782  / QRS 0.942  / T 0.904   mean 0.876
+  sanity, a network that answers background everywhere: P 0.000  / QRS 0.000  / T 0.000
+
+wrote task1_ludb\figs\results_final.json, one_test_record_final.png, qrs_duration_final.png, dice_per_record_final.png, improve_arms.png and model_final_seed*.pt

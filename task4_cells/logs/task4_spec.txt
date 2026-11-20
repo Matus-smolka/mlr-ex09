@@ -1,0 +1,84 @@
+--- cell 63 [markdown] 1482 chars ---
+### Task 4 — Counting cells (2D, a density map → a count)
+
+"How many cells are in this image?" is one of the most frequent questions
+in a biology lab. Cells touch and overlap, so a threshold and counting the
+blobs misses many of them. Example 6 turned every QRS into a bump of a
+heatmap and then found the peaks; here the same idea goes one step
+further: put a small Gaussian on the centre of every annotated cell, and
+the image of the bumps — a **density map** — sums to the number of cells.
+A U-Net learns to paint the density map, and the count is the **sum of its
+output**: nobody has to find the individual cells.
+
+**Data:** synthetic fluorescence-microscopy images of cells (made with the
+SIMCEP simulator) from the counting paper of the Oxford Visual Geometry
+Group (Lempitsky & Zisserman, *Learning to count objects in images*, NIPS
+2010; [the dataset page](https://www.robots.ox.ac.uk/~vgg/research/counting/index_org.html)):
+200 images of 256 × 256 pixels with a dot at the centre of every cell. The
+cell downloads it from the VGG page (16 MB). It gives
+
+- `cell_img` — `(200, 256, 256)`, the blue channel of every image, in [0, 1] (the red and green channels are empty);
+- `cell_dots` — `(200, 256, 256)`, 1 at the centre of every cell, 0 elsewhere;
+- `cell_count` — `(200,)`, the number of cells in every image (the sum of its dots);
+- `cell_split` — the image indices of the training (images 1–80), validation (81–100) and test set (101–200, the test set of the paper).
+--- cell 64 [code] 1617 chars ---
+CELLS_URL = "https://www.robots.ox.ac.uk/~vgg/research/counting/cells.zip"
+CELLS = Path("data/cells")
+if len(list(CELLS.glob("*.png"))) != 400:                       # 200 images + 200 dot images
+    os.makedirs(CELLS, exist_ok=True)
+    urllib.request.urlretrieve(CELLS_URL, "data/cells.zip")     # 16 MB
+    zipfile.ZipFile("data/cells.zip").extractall(CELLS)
+    os.remove("data/cells.zip")
+
+cell_img, cell_dots = [], []
+for i in range(1, 201):
+    rgb = np.asarray(Image.open(CELLS / f"{i:03d}cell.png").convert("RGB"), dtype=np.float32) / 255
+    dots = np.asarray(Image.open(CELLS / f"{i:03d}dots.png").convert("RGB"))
+    cell_img.append(rgb[..., 2])                                # the cells are in the blue channel
+    cell_dots.append((dots[..., 0] > 0) & (dots[..., 1] == 0))  # a red dot at every cell centre
+cell_img = np.stack(cell_img)
+cell_dots = np.stack(cell_dots).astype(np.float32)
+cell_count = cell_dots.sum(axis=(1, 2))
+cell_split = {"train": np.arange(0, 80), "valid": np.arange(80, 100), "test": np.arange(100, 200)}
+print("images", cell_img.shape, "| cells per image", int(cell_count.min()), "–", int(cell_count.max()),
+      f"(mean {cell_count.mean():.0f})", "|", {s: len(v) for s, v in cell_split.items()})
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 4.2))
+for ax, i in zip(axes, [0, 1, int(np.argmax(cell_count[:80]))]):
+    ax.imshow(cell_img[i], cmap="gray")
+    rows, cols = np.nonzero(cell_dots[i])
+    ax.plot(cols, rows, "r.", markersize=2)
+    ax.set_title(f"image {i + 1}: {cell_count[i]:.0f} cells (red: the dots)", fontsize=10)
+    ax.axis("off")
+plt.tight_layout()
+plt.show()
+--- cell 65 [markdown] 240 chars ---
+**Your specification** — fill it in before you ask the agent for any code:
+
+| | your answer |
+| --- | --- |
+| network input (shape) | |
+| network output (shape) | |
+| last layer | |
+| training loss | |
+| evaluation metric | |
+| baseline | |
+--- cell 66 [markdown] 778 chars ---
+**Baseline and target.** Two baselines: answering the mean count of the
+training images for every image (a count MAE of about **56** cells
+on the test images), and Otsu's threshold followed by counting the
+connected blobs (MAE about **95**: touching cells merge into one
+blob, so it finds only about 45 % of them). Your network should
+count within a few cells — a count MAE well under 10 in most runs, out of
+about 170.
+
+**What to show:**
+
+- your specification table;
+- the check that your target sums to the count, on a few training images;
+- the test count MAE of your network and of both baselines;
+- the predicted against the true count of all test images (a scatter plot with the diagonal);
+- one test image with its target and its predicted density map, each with its sum.
+--- cell 67 [markdown] 102 chars ---
+*Your agent's code goes into the cells below (add as many as you need), or into a script of your own.*
+--- cell 68 [code] 0 chars ---

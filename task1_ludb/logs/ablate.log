@@ -1,0 +1,15 @@
+architecture UNet(1, 1, 4, [8, 16, 32, 64, 128, 256, 512]), lr 0.001, 120 epochs, seeds fixed
+120 epochs in 19 s; best validation loss 0.3012 in epoch 48
+
+A  as parsed (unannotated beats taught as background)
+  judged as parsed      P 0.741  / QRS 0.901  / T 0.831   mean 0.824
+  judged span + buffer  P 0.763  / QRS 0.919  / T 0.869   mean 0.850
+  marks 262/288 annotated beats (91.0%) and 56/60 unannotated edge beats (93.3%)
+120 epochs in 19 s; best validation loss 0.2490 in epoch 46
+
+B  repaired (those samples are -1)
+  judged as parsed      P 0.707  / QRS 0.843  / T 0.836   mean 0.795
+  judged span + buffer  P 0.741  / QRS 0.935  / T 0.896   mean 0.858
+  marks 288/288 annotated beats (100.0%) and 60/60 unannotated edge beats (100.0%)
+
+wrote task1_ludb\figs\ablate_repair.json

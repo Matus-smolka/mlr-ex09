@@ -1,0 +1,59 @@
+C:\Users\MSI\Documents\skola\ing\prvák\mlr\cviko9\task2_motion\part1.py:114: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+====================================================================================================
+0. the pipeline, checked before anything is trained
+====================================================================================================
+UNet(1, 3, 7, [16, 32, 64, 128]): 170k parameters; (batch, 3, 256) in -> (batch, 7, 256) logits out, so every sample answers for itself
+cross-entropy with ignore_index=-1: a flat guess costs log 7 = 1.946, and a window in which every sample is a pause costs nan - not 0 - so those windows are left out of training and validation, where they could teach nothing and a single NaN step would have reset every weight: 25 of 155 training and 17 of 157 validation windows are the long pauses before the first activity or after the last one
+130 training windows on 2 recordings, 140 validation windows, 161 evaluation windows on the test users - no overlap, no padding, the last window of a recording slid back so that every sample is answered once, always from a full window of real signal
+the search chooses from 24 orientations; the phone will be pretend-worn in 3 (2 axis-aligned, which a candidate can undo exactly, 1 continuous, which none can), and the same setting is chosen on the validation users only
+
+====================================================================================================
+1. the baselines, before any network
+====================================================================================================
+always answering standing: accuracy 0.176, macro F1 0.043
+nearest class average of (mean, sd) of each axis, one answer per 256-sample window: accuracy 0.608, macro F1 0.505; per class walk 0.08, upst 0.00, down 0.70, sitt 0.79, stan 0.83, lyin 0.92, tran 0.21
+      the class averages come from walk 34, upst 18, down 21, sitt 9, stan 13, lyin 10, tran 2 training windows that hold a single class. A transition runs 194 samples at the median against a 256-sample window, so its average is built from the fewest windows of the seven, and it is the answer a window that straddles a boundary - 9.9% of the test windows - drifts towards, because a boundary is the loudest thing in it
+-> standing is 17.6% of the labelled test samples, all the first baseline has to offer; the second reads a whole window at once, the way the app will, and can only ever give one answer for it - the network answers each sample of the window separately
+
+====================================================================================================
+2. the four arms (1 epochs, batch 32, lr 0.001, widths [16, 32, 64, 128])
+====================================================================================================
+1 epochs in 1 s; best validation loss 1.9342 in epoch 1
+  A_plain            validation accuracy 0.203, macro F1 0.048   per class walk 0.00 upst 0.00 down 0.00 sitt 0.00 stan 0.34 lyin 0.00 tran 0.00   in 5 s
+1 epochs in 0 s; best validation loss 1.9388 in epoch 1
+  B_rot24            validation accuracy 0.203, macro F1 0.048   per class walk 0.00 upst 0.00 down 0.00 sitt 0.00 stan 0.34 lyin 0.00 tran 0.00   in 0 s
+
+====================================================================================================
+3. what the search would choose - every arm read in all 24 orientations, scored on validation
+====================================================================================================
+the setting is chosen on the validation users, with the phone worn as: x,y,z, -y,x,z, x,-x,x  (the first is nothing turned)
+  A_plain            16 settings; without any search 0.048, best with one 0.048 macro F1
+  B_rot24            16 settings; without any search 0.048, best with one 0.048 macro F1
+32 settings scored in 48 s, and not one test sample touched
+the best few, all of them chosen without looking at the test users:
+   A_plain            per window    score prob     margin 0.00 -> validation macro F1 0.048
+   A_plain            per window    score prob     margin 0.02 -> validation macro F1 0.048
+   A_plain            per window    score prob     margin 0.05 -> validation macro F1 0.048
+   A_plain            per window    score prob     margin 0.10 -> validation macro F1 0.048
+   A_plain            per window    score logprob  margin 0.00 -> validation macro F1 0.048
+   A_plain            per window    score logprob  margin 0.20 -> validation macro F1 0.048
+
+====================================================================================================
+4. the test users, scored once
+====================================================================================================
+arm                 as it comes  macro F1 |  worn as -y,x,z mean over the worn set
+A_plain                   0.176     0.043 |           0.176                  0.176
+B_rot24                   0.176     0.043 |           0.176                  0.176
+
+the search as chosen (A_plain, per window, score prob, margin 0.0), on the test users:
+worn as                   plain  searched    gain |  orientation left off switched away
+x,y,z                     0.176     0.176  +0.000 |                 171 deg        100.0%
+-y,x,z                    0.176     0.176  +0.000 |                 171 deg        100.0%
+turned at random 1        0.176     0.176  +0.000 |                 105 deg        100.0%
+mean over the 2 axis-aligned wearings: 0.176 plain, 0.176 searched
+mean over the 1 continuous wearings no candidate can represent: 0.176 plain, 0.176 searched
+on the test users as they come, the search switched away from the real orientation in 100.0% of the windows and moved accuracy +0.000 - that is the price of looking when nothing is turned
+
+wrote model_*.pt, curve_*.png, preds_*_test.npz and results_net.json to task2_motion\figs_smoke2
+for the phone, a model has to read the raw axes the app feeds it: A_plain does, the gravity-aligned arm does not (something would have to rotate every window first)

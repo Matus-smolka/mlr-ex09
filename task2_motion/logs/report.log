@@ -1,0 +1,83 @@
+==================================================================================================
+0. do the artifacts agree with each other?
+==================================================================================================
+4 prediction files (A_plain, B_rot24, C_rotSO3, D_gravity_aligned) over 196733 test samples in 10 recordings; every sample answered once, and re-scoring each file from disk reproduces the accuracy and macro F1 in results_net.json to 1e-9
+the setting the search runs with (D_gravity_aligned, per recording, score prob, margin 0.0) is one of the 64 scored on the validation users; the test users were scored once, after that choice
+turned cases saved: 1: -y,x,z, 9: turned at random 3
+
+==================================================================================================
+1. the specification table (notebook cell 53), filled in from what was actually run
+==================================================================================================
+| network input (shape)  | (batch, 3, 256) - the three accelerometer axes in g at 50 Hz, 5.1 s per window; at evaluation every sample of a recording is answered once, from a full window, never from padding |
+| network output (shape) | (batch, 7, 256) - seven logits per sample, one answer for every sample of the window, not one for the window |
+| last layer             | nn.Conv1d(16, 7, 1), a 1 x 1 convolution; no softmax - softmax only for reading the probabilities, argmax for the answer |
+| training loss          | CrossEntropyLoss(ignore_index=-1) over the 7 classes - the samples between activities (label -1) cost nothing, and a window in which EVERY sample is -1 is left out because torch returns NaN for it, not 0 |
+| evaluation metric      | macro F1 over the 7 classes on the test users (mean of the per-class F1s, so the rare 3.6 s transition counts as much as standing), with accuracy alongside; -1 samples excluded |
+| baseline               | always answering standing: test accuracy 0.176, macro F1 0.043 (the notebook says about 0.18 and 0.04); a second, stronger baseline answers one class per window by nearest class average (below) |
+| network                | UNet(1, 3, 7, [16, 32, 64, 128]) from Part 1, 170k parameters, 400 epochs, batch 32, lr 0.001, Adam, best validation weights |
+
+(paste-ready) network D_gravity_aligned is the arm the search was chosen on; the exported file is the same network without the search, since the app runs one forward pass per window
+
+==================================================================================================
+2. the numbers on the test users, next to the baselines
+==================================================================================================
+model                                                       accuracy  macro F1 |  walk  upst  down  sitt  stan  lyin  tran
+baseline: always standing                                      0.176     0.043 |  0.00  0.00  0.00  0.00  0.30  0.00  0.00
+baseline: nearest class average, one answer per window         0.693     0.651 |  0.54  0.38  0.71  0.80  0.83  0.85  0.44
+A_plain (as it comes)                                          0.918     0.918 |  0.99  0.99  1.00  0.79  0.81  0.98  0.85
+B_rot24 (as it comes)                                          0.778     0.774 |  0.98  0.97  0.99  0.18  0.61  0.87  0.81
+C_rotSO3 (as it comes)                                         0.679     0.688 |  0.98  0.96  0.97  0.00  0.64  0.42  0.84
+D_gravity_aligned (as it comes)                                0.841     0.856 |  0.99  0.99  1.00  0.58  0.80  0.77  0.87
+D_gravity_aligned + the orientation search (nothing turned)     0.839     0.854 |  0.99  0.99  1.00  0.58  0.80  0.76  0.86
+the notebook's target is a macro F1 around 0.9 on the test users. Best arm A_plain: 0.918 against 0.043 for always-standing (0.918 accuracy against 0.176)
+support on the test users: walk 20345, upst 20318, down 19073, sitt 24307, stan 25539, lyin 25790, tran 10008
+the class-average baseline is built from walk 401, upst 373, down 347, sitt 224, stan 307, lyin 259, tran 33
+
+==================================================================================================
+3. where the mistakes are: the confusion matrix on the test users
+==================================================================================================
+  A_plain              11938 of 145380 labelled samples wrong (8.2%); most of it: sitt->stan 5481, stan->sitt 3372, tran->lyin 631, tran->sitt 554
+  D_gravity_aligned    23154 of 145380 labelled samples wrong (15.9%); most of it: sitt->lyin 6322, stan->sitt 5593, lyin->sitt 4918, sitt->stan 3055
+      the matrix is drawn in fig_confusion.png; the same picture for the always-standing baseline is a single filled column under standing
+
+==================================================================================================
+4. one test recording: what it was, what the network said
+==================================================================================================
+  A_plain              accuracy on this recording 0.877, macro F1 0.891
+  B_rot24              accuracy on this recording 0.789, macro F1 0.792
+  C_rotSO3             accuracy on this recording 0.638, macro F1 0.666
+  D_gravity_aligned    accuracy on this recording 0.710, macro F1 0.755
+      drawn in fig_timeline.png (10 test recordings covered by the artifacts, this is number 1 of them)
+
+==================================================================================================
+5. the phone turned round in the pocket
+==================================================================================================
+worn as                 acc plain  acc searched    gain |  macro F1  searched | deg left off  <20 deg  switched
+x,y,z                       0.841         0.839  -0.002 |     0.856     0.854 |           37     59%     41.5%
+-y,x,z                      0.832         0.839  +0.007 |     0.848     0.854 |           37     59%    100.0%
+-x,-y,z                     0.798         0.839  +0.041 |     0.810     0.854 |           37     59%    100.0%
+x,-y,-z                     0.555         0.839  +0.284 |     0.505     0.854 |           37     59%    100.0%
+x,-z,y                      0.736         0.839  +0.102 |     0.741     0.854 |           37     59%    100.0%
+z,y,-x                      0.836         0.839  +0.003 |     0.851     0.854 |           37     59%     70.5%
+z,x,y                       0.768         0.839  +0.071 |     0.779     0.854 |           37     59%    100.0%
+turned at random 1          0.764         0.840  +0.076 |     0.774     0.856 |           87      0%    100.0%
+turned at random 2          0.660         0.839  +0.179 |     0.656     0.854 |          104      0%    100.0%
+turned at random 3          0.547         0.841  +0.295 |     0.493     0.856 |           54      0%    100.0%
+mean over the 7 wearings a candidate can represent exactly: accuracy 0.766 plain, 0.839 searched
+mean over the 3 continuous wearings none can represent: accuracy 0.657 plain, 0.840 searched
+nothing turned (the data as delivered): the search switched away from the plain reading in 41.5% of the windows and moved accuracy -0.002
+robustness without any search, accuracy as the phone is worn in each of the 10 stress wearings:
+  A_plain              as it comes 0.918; over the wearings min 0.074, mean 0.330, and 80% of them below 0.5
+  B_rot24              as it comes 0.778; over the wearings min 0.464, mean 0.694, and 10% of them below 0.5
+  C_rotSO3             as it comes 0.679; over the wearings min 0.583, mean 0.640, and 0% of them below 0.5
+  D_gravity_aligned    as it comes 0.841; over the wearings min 0.547, mean 0.734, and 0% of them below 0.5
+  turned case 1 (-y,x,z), recording 1 of the test users: accuracy 0.695 plain, 0.710 searched -> fig_turned_1.png
+  turned case 9 (turned at random 3), recording 1 of the test users: accuracy 0.407 plain, 0.711 searched -> fig_turned_9.png
+
+==================================================================================================
+6. what goes on the phone
+==================================================================================================
+the .onnx can only carry an arm that reads the raw axes the app feeds it: A_plain, B_rot24, C_rotSO3. D_gravity_aligned is the one the search was chosen on and it is NOT one of them - canonicalizing a window is work the app does not do.
+export the best of those on validation - A_plain (0.942 validation macro F1) - with export_onnx.py: input acc 1 x 3 x 256, output logits 1 x 7 x 256, model_info with the class names, units g, 50 Hz, window 256, axes x,y,z. The app divides the browser's m/s2 by 9.80665 because the file says g.
+the search is NOT in the .onnx either - the app does one forward pass per window - so what runs on the phone is one network with no second look. If the pocket is not the belt mount this data was collected with, the honest alternative is B_rot24, which is robust by training: 0.778 accuracy as it comes against 0.918 for A_plain, but 0.694 against 0.330 averaged over the turned wearings.
+then on the phone: load the .onnx, Start, phone on the waist, and the script the notebook suggests - stand 20 s, walk 30 s, sit 20 s, take the stairs, lie down on a bench - Stop, and download the CSV.

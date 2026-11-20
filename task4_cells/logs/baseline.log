@@ -1,0 +1,99 @@
+==============================================================================
+1. THE TWO BASELINES THE TASK NAMES
+==============================================================================
+constant, train mean                         MAE train   47.7  valid   50.1  TEST   56.1   [no parameters]
+constant, train median                       MAE train   47.6  valid   50.2  TEST   57.1   [no parameters]
+Otsu threshold, count blobs                  MAE train  108.6  valid  109.1  TEST   94.6   [no parameters (Otsu per image)]
+
+==============================================================================
+2. THRESHOLD AND BLOB COUNT, SWEEPED ON VALIDATION
+==============================================================================
+threshold  min area  blobs/image  MAE valid  MAE test
+     0.30         0         95.1       84.8      86.2
+     0.40         0         69.6      110.2     101.6
+     0.50         0         77.0      100.0      95.2
+     0.50        20         75.4      101.6      96.9
+     0.50        40         71.9      105.2     100.5
+     0.55         0         82.5       94.3      89.9
+     0.60         0         87.4       89.0      85.4
+     0.60        20         81.0       95.0      92.2
+     0.60        40         69.6      106.5     103.7
+     0.65         0         90.2       85.7      82.8
+     0.70         0         92.0       83.3      81.2
+     0.70        20         75.0       99.8      98.8
+     0.70        40         53.5      120.7     120.6
+     0.75         0         90.7       84.3      83.2
+     0.80         0         85.5       88.7      88.3
+     0.80        20         54.7      118.8     119.7
+     0.80        40         30.4      143.8     142.9
+     0.85         0         77.5       96.6      97.2
+     0.90         0         63.1      109.3     111.5
+best on validation: threshold 0.70, min area 0 -> valid 83.3, test 81.2 (it counts 92 blobs per image against 176 cells)
+
+==============================================================================
+3. AREA SPLITTING: 'A BIG BLOB IS PROBABLY TWO CELLS'
+==============================================================================
+  threshold 0.40: best so far valid   26.9 at cell area  90 px
+  threshold 0.50: best so far valid   21.5 at cell area  90 px
+  threshold 0.60: best so far valid   11.1 at cell area  60 px
+  threshold 0.70: best so far valid   11.1 at cell area  60 px
+best: threshold 0.60, divisor 60 px -> valid 11.1, test 12.7, bias -5.5 cells. This is the hypothesis the task is built on, working as an explicit rule: a bright region of twice the area is counted as two cells. Counting the same blobs as they are gives 85.4 on test, so the split alone is worth 72.8 cells. The divisor it wants (60 px) is smaller than a lone cell (126 px), because at this threshold every cell sits inside a fattened sheet - section 5's saturation, absorbed into one fitted number.
+
+==============================================================================
+4. TOTAL BRIGHTNESS (the leak): count = sum(relu(image - floor)) / scale
+==============================================================================
+  floor 0.00: scale    130.9, MAE valid  20.6, test  22.2
+  floor 0.10: scale     96.8, MAE valid  10.3, test  10.5
+  floor 0.20: scale     62.1, MAE valid  10.2, test  10.7
+  floor 0.25: scale     48.4, MAE valid  17.2, test  18.6
+  floor 0.30: scale     37.8, MAE valid  20.3, test  22.2
+  floor 0.40: scale     24.1, MAE valid  21.3, test  23.5
+  floor 0.50: scale     15.3, MAE valid  27.4, test  29.4
+  floor 0.60: scale      8.9, MAE valid  36.5, test  38.5
+best: floor 0.20 -> valid 10.2, test 10.7 with exactly ONE fitted number. No count MAE below ~10 here means the model found cells; it may have found the exposure instead.
+
+==============================================================================
+5. PEAKS OF A SMOOTHED IMAGE (the classical density-free counter, and it can be localized)
+==============================================================================
+ sigma   frac  peaks/image  MAE valid  recall  precision
+   1.0   0.30        181.7       25.1   0.734      0.704
+   1.0   0.50        128.9       46.9   0.731      0.996
+   1.0   0.70        116.3       58.8   0.665      0.997
+   2.0   0.30        135.0       40.8   0.667      0.868
+   2.0   0.50        117.1       59.8   0.661      1.000
+   2.0   0.70         98.6       76.9   0.564      0.999
+   3.0   0.30        111.1       64.0   0.598      0.939
+   3.0   0.50        103.7       73.2   0.584      1.000
+   3.0   0.70         76.5       97.7   0.446      0.999
+best on validation: sigma 1.5, level 0.30 x max -> valid 24.4, test 25.4; on the validation split it finds 70.2% of the centres at 79.8% precision, on test 70.7% at 80.0%
+
+==============================================================================
+6. THE DENSITY TARGET ITSELF: what a perfect map could score
+==============================================================================
+ sigma sum - count, reflect  sum - count, zeros  mean, zeros  recall (val)  precision (val)  F1 (val)
+   1.0              0.000%              1.640%       0.456%         0.952            1.000     0.975
+   1.5              0.000%              2.317%       0.713%         0.933            1.000     0.965
+   2.0              0.000%              2.869%       0.959%         0.853            1.000     0.921
+   2.5              0.000%              3.349%       1.203%         0.798            1.000     0.888
+   3.0              0.000%              3.775%       1.448%         0.749            1.000     0.857
+   4.0              0.000%              4.503%       1.942%         0.615            1.000     0.761
+sigma 1.0 has the best peak F1 on validation; on test the same map reaches recall 0.950, precision 1.000, F1 0.974. That is the CEILING of peak counting, set by the 451 pairs of centres closer than a pixel apart and by how wide the bumps are - not by the network.
+The two sum columns answer the notebook's 'check that your target sums to the count': scipy's gaussian_filter
+reflects at the border by default, which folds the truncated tail back in, so the map sums to the
+count to 3 decimals. Cutting the kernel off instead (mode='constant', what a convolution layer with
+zero padding does) loses up to the printed percentage for the worst of the 441 border centres - the
+training script therefore checks the sum and rescales if it ever matters.
+
+==============================================================================
+7. ALL OF THEM ON THE TEST SPLIT, ONCE
+==============================================================================
+constant, train mean                         MAE   56.1  RMSE   64.5  bias   +10.0  R2 -0.025  worst   136
+constant, train median                       MAE   57.1  RMSE   65.9  bias   +16.5  R2 -0.067  worst   129
+Otsu threshold, count blobs                  MAE   94.6  RMSE  120.2  bias   -83.1  R2 -2.555  worst   265
+bright cores at 0.70, blobs counted          MAE   81.2  RMSE   94.0  bias   -81.2  R2 -1.176  worst   201
+blobs at 0.60, area / 60 px                  MAE   12.7  RMSE   15.1  bias    -6.9  R2  0.944  worst    39
+brightness sum above 0.20 / 62               MAE   10.7  RMSE   12.8  bias    -3.3  R2  0.960  worst    31
+peaks of a sigma=1.5 blur                    MAE   25.4  RMSE   34.3  bias   -19.9  R2  0.711  worst   101  recall 0.707 precision 0.800 F1 0.751
+
+the task's targets: constant about 56, Otsu blobs about 95, and 'well under 10' for a network. Best hand rule here: brightness sum above 0.20 / 62 at MAE 10.7 — so a network must beat ~11 and must do it with localization, or it has learned the exposure.
+wrote task4_cells\figs\results_classical.json and classical_predictions.npz

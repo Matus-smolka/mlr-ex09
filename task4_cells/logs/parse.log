@@ -1,0 +1,2 @@
+x (200, 256, 256) float32 in [0.000, 1.000] | dots (200, 256, 256) | count 74-317, mean 176.0
+splits 80 / 20 / 100 | per-image stats -> task4_cells\cache\cells_records.csv | cache -> task4_cells\cache\cells.npz

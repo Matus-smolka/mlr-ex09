@@ -1,0 +1,28 @@
+median wave intervals from the 140 training patients (samples from the R peak; 1 sample = 2 ms):
+  P    onset -101  offset  -46   -> 55 samples = 110 ms wide
+  QRS  onset  -21  offset  +24   -> 45 samples = 90 ms wide
+  T    onset  +81  offset +173   -> 92 samples = 184 ms wide
+median R-R interval of the training patients: 450 samples = 900 ms
+
+searching the detector on the validation split, judged on the repaired labels:
+detector           frac  dist  sigma   RR   validation macro Dice P/QRS/T    mean
+bandpass[8, 20]    0.40   150    0.0   no   0.723 / 0.903 / 0.836    0.821
+bandpass[8, 20]    0.40   200    0.0   no   0.723 / 0.903 / 0.836    0.821
+bandpass[8, 20]    0.40   250    0.0   no   0.723 / 0.903 / 0.836    0.821
+bandpass[8, 20]    0.40   150    4.0   no   0.722 / 0.902 / 0.837    0.821
+bandpass[8, 20]    0.40   200    4.0   no   0.722 / 0.902 / 0.837    0.821
+bandpass[8, 20]    0.40   250    4.0   no   0.722 / 0.902 / 0.837    0.821
+bandpass[8, 20]    0.40   150    2.0   no   0.723 / 0.902 / 0.836    0.820
+bandpass[8, 20]    0.40   200    2.0   no   0.723 / 0.902 / 0.836    0.820
+
+your rule as proposed (thresh at 60 % of the record maximum, 250-sample gap, fixed windows): P 0.716  / QRS 0.876  / T 0.801   mean 0.798
+
+TEST split (30 patients), detector bandpass[8, 20] frac=0.4 distance=150 sigma=0 RR-scaled=False
+  your rule 60 % of max              judged P 0.569  / QRS 0.741  / T 0.710   |  as parsed P 0.486  / QRS 0.668  / T 0.613
+  tuned bandpass[8, 20]              judged P 0.637  / QRS 0.862  / T 0.836   |  as parsed P 0.544  / QRS 0.773  / T 0.717
+  ceiling: true R peaks + same windows judged P 0.693  / QRS 0.887  / T 0.842   |  as parsed P 0.656  / QRS 0.884  / T 0.797
+  reference in the notebook (as parsed, unmasked): P 0.74 / QRS 0.89 / T 0.85
+  R peaks, your rule             : 288 annotated, 282 detected, sensitivity 0.788, precision 0.805 (61 missed, 55 false alarms)
+  R peaks, chosen (bandpass[8, 20]): 288 annotated, 339 detected, sensitivity 0.965, precision 0.820 (10 missed, 61 false alarms)
+
+wrote task1_ludb\figs\baseline_one_test_record.png

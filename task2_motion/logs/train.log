@@ -1,0 +1,74 @@
+====================================================================================================
+0. the pipeline, checked before anything is trained
+====================================================================================================
+UNet(1, 3, 7, [16, 32, 64, 128]): 170k parameters; (batch, 3, 256) in -> (batch, 7, 256) logits out, so every sample answers for itself
+cross-entropy with ignore_index=-1: a flat guess costs log 7 = 1.946, and a window in which every sample is a pause costs nan - not 0 - so those windows are left out of training and validation, where they could teach nothing and a single NaN step would have reset every weight: 463 of 2836 training and 103 of 759 validation windows are the long pauses before the first activity or after the last one
+2373 training windows on 41 recordings, 656 validation windows, 772 evaluation windows on the test users - no overlap, no padding, the last window of a recording slid back so that every sample is answered once, always from a full window of real signal
+the search chooses from 24 orientations; the phone will be pretend-worn in 10 (7 axis-aligned, which a candidate can undo exactly, 3 continuous, which none can), and the same setting is chosen on the validation users only
+
+====================================================================================================
+1. the baselines, before any network
+====================================================================================================
+always answering standing: accuracy 0.176, macro F1 0.043
+nearest class average of (mean, sd) of each axis, one answer per 256-sample window: accuracy 0.693, macro F1 0.651; per class walk 0.54, upst 0.38, down 0.71, sitt 0.80, stan 0.83, lyin 0.85, tran 0.44
+      the class averages come from walk 401, upst 373, down 347, sitt 224, stan 307, lyin 259, tran 33 training windows that hold a single class. A transition runs 181 samples at the median against a 256-sample window, so its average is built from the fewest windows of the seven, and it is the answer a window that straddles a boundary - 12.3% of the test windows - drifts towards, because a boundary is the loudest thing in it
+-> standing is 17.6% of the labelled test samples, all the first baseline has to offer; the second reads a whole window at once, the way the app will, and can only ever give one answer for it - the network answers each sample of the window separately
+
+====================================================================================================
+2. the four arms (400 epochs, batch 32, lr 0.001, widths [16, 32, 64, 128])
+====================================================================================================
+400 epochs in 800 s; best validation loss 0.1524 in epoch 47
+C:\Users\MSI\Documents\skola\ing\prvák\mlr\cviko9\task2_motion\part1.py:114: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+  A_plain            validation accuracy 0.947, macro F1 0.942   per class walk 0.99 upst 0.99 down 0.99 sitt 0.91 stan 0.91 lyin 0.98 tran 0.84   in 804 s
+400 epochs in 1731 s; best validation loss 0.4781 in epoch 185
+  B_rot24            validation accuracy 0.810, macro F1 0.817   per class walk 0.95 upst 0.92 down 0.97 sitt 0.53 stan 0.69 lyin 0.86 tran 0.80   in 1731 s
+400 epochs in 679 s; best validation loss 0.6353 in epoch 63
+  C_rotSO3           validation accuracy 0.695, macro F1 0.699   per class walk 0.96 upst 0.93 down 0.95 sitt 0.00 stan 0.64 lyin 0.63 tran 0.80   in 679 s
+400 epochs in 740 s; best validation loss 0.3296 in epoch 40
+  D_gravity_aligned  validation accuracy 0.891, macro F1 0.895   per class walk 0.98 upst 0.99 down 0.99 sitt 0.76 stan 0.88 lyin 0.85 tran 0.83   in 740 s
+
+====================================================================================================
+3. what the search would choose - every arm read in all 24 orientations, scored on validation
+====================================================================================================
+the setting is chosen on the validation users, with the phone worn as: x,y,z, -y,x,z, x,-z,y, -x,x,-x, x,-x,x  (the first is nothing turned)
+  A_plain            16 settings; without any search 0.403, best with one 0.435 macro F1
+  B_rot24            16 settings; without any search 0.661, best with one 0.696 macro F1
+  C_rotSO3           16 settings; without any search 0.658, best with one 0.660 macro F1
+  D_gravity_aligned  16 settings; without any search 0.758, best with one 0.897 macro F1
+64 settings scored in 557 s, and not one test sample touched
+the best few, all of them chosen without looking at the test users:
+   D_gravity_aligned  per recording score prob     margin 0.00 -> validation macro F1 0.897
+   D_gravity_aligned  per recording score logprob  margin 0.00 -> validation macro F1 0.897
+   D_gravity_aligned  per recording score prob     margin 0.02 -> validation macro F1 0.870
+   D_gravity_aligned  per window    score prob     margin 0.00 -> validation macro F1 0.864
+   D_gravity_aligned  per window    score logprob  margin 0.00 -> validation macro F1 0.863
+   D_gravity_aligned  per window    score prob     margin 0.02 -> validation macro F1 0.856
+
+====================================================================================================
+4. the test users, scored once
+====================================================================================================
+arm                 as it comes  macro F1 |  worn as -y,x,z mean over the worn set
+A_plain                   0.918     0.918 |           0.212                  0.330
+B_rot24                   0.778     0.774 |           0.726                  0.694
+C_rotSO3                  0.679     0.688 |           0.638                  0.640
+D_gravity_aligned         0.841     0.856 |           0.832                  0.734
+
+the search as chosen (D_gravity_aligned, per recording, score prob, margin 0.0), on the test users:
+worn as                   plain  searched    gain |  orientation left off switched away
+x,y,z                     0.841     0.839  -0.002 |                  37 deg         41.5%
+-y,x,z                    0.832     0.839  +0.007 |                  37 deg        100.0%
+-x,-y,z                   0.798     0.839  +0.041 |                  37 deg        100.0%
+x,-y,-z                   0.555     0.839  +0.284 |                  37 deg        100.0%
+x,-z,y                    0.736     0.839  +0.102 |                  37 deg        100.0%
+z,y,-x                    0.836     0.839  +0.003 |                  37 deg         70.5%
+z,x,y                     0.768     0.839  +0.071 |                  37 deg        100.0%
+turned at random 1        0.764     0.840  +0.076 |                  87 deg        100.0%
+turned at random 2        0.660     0.839  +0.179 |                 104 deg        100.0%
+turned at random 3        0.547     0.841  +0.295 |                  54 deg        100.0%
+mean over the 7 axis-aligned wearings: 0.766 plain, 0.839 searched
+mean over the 3 continuous wearings no candidate can represent: 0.657 plain, 0.840 searched
+on the test users as they come, the search switched away from the real orientation in 41.5% of the windows and moved accuracy -0.002 - that is the price of looking when nothing is turned
+
+wrote model_*.pt, curve_*.png, preds_*_test.npz and results_net.json to task2_motion\figs
+for the phone, a model has to read the raw axes the app feeds it: D_gravity_aligned does, the gravity-aligned arm does not (something would have to rotate every window first)
